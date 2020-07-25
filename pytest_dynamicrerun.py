@@ -30,8 +30,8 @@ def _add_dynamic_rerun_schedule_flag(parser):
         "--dynamic-rerun-schedule",
         action="store",
         dest="dynamic_rerun_schedule",
-        default="* * * * *",
-        help="Set the time to attempt a rerun in using a cron like format ( defaults to '* * * * *' )",
+        default=None,
+        help="Set the time to attempt a rerun in using a cron like format ( e.g.: '* * * * *' )",
     )
 
     parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
