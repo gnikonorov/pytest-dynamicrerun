@@ -47,7 +47,11 @@ def _add_dynamic_rerun_errors_flag(parser):
         help="Set the errors that will be dynamically rerun ( by default all errors are dynamically rerun )",
     )
 
-    parser.addini("dynamic_rerun_errors", "default value for --dyamic-rerun-errors")
+    parser.addini(
+        "dynamic_rerun_errors",
+        "default value for --dyamic-rerun-errors",
+        type="linelist",
+    )
 
 
 # NOTE: See how we can refactor the _get methods into one method
