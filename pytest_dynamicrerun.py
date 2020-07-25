@@ -90,9 +90,9 @@ def _is_rerunnable_error(item, report):
 
 
 def pytest_addoption(parser):
-    _add_dynamic_rerun_schedule_flag(parser)
     _add_dynamic_rerun_attempts_flag(parser)
     _add_dynamic_rerun_errors_flag(parser)
+    _add_dynamic_rerun_schedule_flag(parser)
 
 
 def pytest_report_teststatus(report):
