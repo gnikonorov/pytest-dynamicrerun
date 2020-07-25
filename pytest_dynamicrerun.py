@@ -111,7 +111,12 @@ def pytest_sessionstart(session):
     session.num_dynamic_reruns_kicked_off = 0
 
 
-# Consider providing a fixture too
+def pytest_terminal_summary(terminalreporter):
+    terminalreporter.write_sep("=", "Dynamically rerun tests")
+    for report in terminalreporter.stats["dynamic-rerun"]:
+        terminalreporter.write_line(report.nodeid)
+
+
 # @pytest.fixture
 # def bar(request):
 #    return request.config.option.dest_foo
