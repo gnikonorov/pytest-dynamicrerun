@@ -58,6 +58,11 @@ def pytest_addoption(parser):
     _add_dynamic_rerun_attempts_flag(parser)
 
 
+def pytest_report_teststatus(report):
+    if hasattr(report, "dynamically_rerun") and report.dynamically_rerun:
+        return "dynamic-rerun", "DR", ("DYNAMIC_RERUN", {"yellow": True})
+
+
 def pytest_runtest_protocol(item, nextitem):
     # bail early if a falsey value was given for required args
     dynamic_rerun_schedule_arg = _get_dynamic_rerun_schedule_arg(item)
@@ -74,7 +79,11 @@ def pytest_runtest_protocol(item, nextitem):
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
     for report in reports:
-        if report.failed:
+        will_run_again = (
+            item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
+        )
+        if report.failed and will_run_again:
+            report.dynamically_rerun = True
             item.session.dynamic_rerun_items.append(item)
 
         item.ihook.pytest_runtest_logreport(report=report)
