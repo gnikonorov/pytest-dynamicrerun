@@ -1,3 +1,4 @@
+import re
 import time
 from datetime import datetime
 
@@ -6,6 +7,21 @@ from croniter import croniter
 
 DEFAULT_RERUN_ATTEMPTS = 1
 PLUGIN_NAME = "dynamicrerun"
+
+
+def _add_dynamic_rerun_attempts_flag(parser):
+    group = parser.getgroup(PLUGIN_NAME)
+    group.addoption(
+        "--dynamic-rerun-attempts",
+        action="store",
+        dest="dynamic_rerun_attempts",
+        default=1,
+        help="Set the amount of times reruns should be attempted ( defaults to 1 )",
+    )
+
+    parser.addini(
+        "dynamic_rerun_attempts", "default value for --dynamic-rerun-attempts"
+    )
 
 
 def _add_dynamic_rerun_schedule_flag(parser):
@@ -21,19 +37,17 @@ def _add_dynamic_rerun_schedule_flag(parser):
     parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
 
 
-def _add_dynamic_rerun_attempts_flag(parser):
+def _add_dynamic_rerun_errors_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
-        "--dynamic-rerun-attempts",
-        action="store",
-        dest="dynamic_rerun_attempts",
-        default=1,
-        help="Set the amount of times reruns should be attempted ( defaults to 1 )",
+        "--dynamic-rerun-errors",
+        action="append",
+        dest="dynamic_rerun_errors",
+        default=None,
+        help="Set the errors that will be dynamically rerun ( by default all errors are dynamically rerun )",
     )
 
-    parser.addini(
-        "dynamic_rerun_schedule", "default value for --dynamic-rerun-attempts"
-    )
+    parser.addini("dynamic_rerun_errors", "default value for --dyamic-rerun-errors")
 
 
 # NOTE: See how we can refactor the _get methods into one method
@@ -42,20 +56,43 @@ def _add_dynamic_rerun_attempts_flag(parser):
 def _get_dynamic_rerun_schedule_arg(item):
     dynamic_rerun_arg = None
     if item.session.config.option.dynamic_rerun_schedule:
-        dynamic_rerun_arg = item.session.config.option.dynamic_rerun_schedule
+        dynamic_rerun_arg = str(item.session.config.option.dynamic_rerun_schedule)
     return dynamic_rerun_arg
 
 
 def _get_dynamic_rerun_attempts_arg(item):
-    if item.session.config.option.dynamic_rerun_schedule:
+    if item.session.config.option.dynamic_rerun_attempts:
         return item.session.config.option.dynamic_rerun_attempts
     else:
         return DEFAULT_RERUN_ATTEMPTS
 
 
+def _get_dynamic_rerun_errors_arg(item):
+    dynamic_rerun_errors = None
+    if item.session.config.option.dynamic_rerun_errors:
+        dynamic_rerun_errors = item.session.config.option.dynamic_rerun_errors
+    return dynamic_rerun_errors
+
+
+def _is_rerunnable_error(item, report):
+    if not report.failed:
+        return False
+
+    dynamic_rerun_errors = _get_dynamic_rerun_errors_arg(item)
+    if not dynamic_rerun_errors:
+        return True
+
+    for rerun_regex in dynamic_rerun_errors:
+        if re.search(rerun_regex, report.longrepr.reprcrash.message):
+            return True
+
+    return False
+
+
 def pytest_addoption(parser):
     _add_dynamic_rerun_schedule_flag(parser)
     _add_dynamic_rerun_attempts_flag(parser)
+    _add_dynamic_rerun_errors_flag(parser)
 
 
 def pytest_report_teststatus(report):
@@ -82,7 +119,7 @@ def pytest_runtest_protocol(item, nextitem):
         will_run_again = (
             item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
         )
-        if report.failed and will_run_again:
+        if report.failed and will_run_again and _is_rerunnable_error(item, report):
             report.dynamically_rerun = True
             item.session.dynamic_rerun_items.append(item)
 
@@ -113,7 +150,7 @@ def pytest_sessionstart(session):
 
 def pytest_terminal_summary(terminalreporter):
     terminalreporter.write_sep("=", "Dynamically rerun tests")
-    for report in terminalreporter.stats["dynamic-rerun"]:
+    for report in terminalreporter.stats.get("dynamic-rerun", []):
         terminalreporter.write_line(report.nodeid)
 
 
