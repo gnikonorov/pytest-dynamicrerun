@@ -1,3 +1,4 @@
+import copy
 import re
 import time
 import warnings
@@ -98,6 +99,8 @@ def _get_dynamic_rerun_attempts_arg(item):
         warnings.warn(warnings_text)
         rerun_attempts = DEFAULT_RERUN_ATTEMPTS
 
+    return rerun_attempts
+
 
 def _get_dynamic_rerun_errors_arg(item):
     dynamic_rerun_errors = None
@@ -128,8 +131,8 @@ def pytest_addoption(parser):
 
 
 def pytest_report_teststatus(report):
-    if hasattr(report, "dynamically_rerun") and report.dynamically_rerun:
-        return "dynamic-rerun", "DR", ("DYNAMIC_RERUN", {"yellow": True})
+    if report.outcome == "dynamically_rerun":
+        return "dynamicrerun", "DR", ("DYNAMIC_RERUN", {"yellow": True})
 
 
 def pytest_runtest_protocol(item, nextitem):
@@ -151,17 +154,25 @@ def pytest_runtest_protocol(item, nextitem):
         will_run_again = (
             item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
         )
-        if report.failed and will_run_again and _is_rerunnable_error(item, report):
-            report.dynamically_rerun = True
-            item.session.dynamic_rerun_items.append(item)
-
-        item.ihook.pytest_runtest_logreport(report=report)
+        if report.failed:
+            if will_run_again and _is_rerunnable_error(item, report):
+                report.outcome = "dynamically_rerun"
+                item.ihook.pytest_runtest_logreport(report=report)
+                # TODO: Need to properly copy this item object.
+                #       If I can't copy it, its duplicated in report.
+                #       Pytest issue raised: https://github.com/pytest-dev/pytest/issues/7543
+                item.session.dynamic_rerun_items.append(copy.copy(item))
+            else:
+                report.outcome = "failed"
+                item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:
         item.session.num_dynamic_reruns_kicked_off += 1
         now_time = datetime.now()
+        # NOTE: in the readme note that croniter does second repeats
+        #       see https://github.com/kiorky/croniter#about-second-repeats
         time_iterator = croniter(dynamic_rerun_schedule_arg, now_time)
 
         time_delta = time_iterator.get_next(datetime) - now_time
@@ -182,7 +193,7 @@ def pytest_sessionstart(session):
 
 def pytest_terminal_summary(terminalreporter):
     terminalreporter.write_sep("=", "Dynamically rerun tests")
-    for report in terminalreporter.stats.get("dynamic-rerun", []):
+    for report in terminalreporter.stats.get("dynamicrerun", []):
         terminalreporter.write_line(report.nodeid)
 
 

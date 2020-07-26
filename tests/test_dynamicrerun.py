@@ -9,7 +9,7 @@ def _assert_result_outcomes(
     _check_outcome_field(outcomes, "skipped", skipped)
     _check_outcome_field(outcomes, "failed", failed)
     _check_outcome_field(outcomes, "error", error)
-    _check_outcome_field(outcomes, "dynamic_rerun", dynamic_rerun)
+    _check_outcome_field(outcomes, "dynamicrerun", dynamic_rerun)
 
 
 def _check_outcome_field(outcomes, field_name, expected_value):
@@ -48,7 +48,7 @@ def test_help_text_contains_plugin_options(testdir):
             "ValueError\n\tAssertionError",
             "['ValueError', 'AssertionError']",
         ),
-        ("dynamic_rerun_schedule", "* * * * *", "'* * * * *'"),
+        ("dynamic_rerun_schedule", "* * * * * *", "'* * * * * *'"),
     ],
 )
 def test_plugin_options_are_ini_configurable(
@@ -84,7 +84,6 @@ def test_plugin_options_are_ini_configurable(
     _assert_result_outcomes(result, passed=1)
 
 
-# TODO: test to make sure default value is actually selected
 @pytest.mark.parametrize("rerun_amount", [0, -1, 2.23, "foobar"])
 def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
     testdir.makeini(
@@ -97,13 +96,31 @@ def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
         )
     )
 
-    testdir.makepyfile("def test_always_true(): assert True")
+    testdir.makepyfile("def test_always_false(): assert False")
     result = testdir.runpytest("-v")
     result.stdout.fnmatch_lines(
         ["*Rerun attempts must be a positive integer. Using default value 1*"]
     )
-    assert result.ret == 0
-    _assert_result_outcomes(result, passed=1)
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, dynamic_rerun=1, failed=1)
+
+
+@pytest.mark.parametrize("rerun_amount", [1, 2])
+def test_positive_integer_dynamic_rerun_attempts_accepted(testdir, rerun_amount):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = * * * * * *
+        dynamic_rerun_attempts = {}
+    """.format(
+            rerun_amount
+        )
+    )
+
+    testdir.makepyfile("def test_always_false(): assert False")
+    result = testdir.runpytest("-v")
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, dynamic_rerun=rerun_amount, failed=1)
 
 
 # TODO: test to make sure default value is actually selected
@@ -120,7 +137,7 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
         )
     )
 
-    testdir.makepyfile("def test_always_true(): assert True")
+    testdir.makepyfile("def test_always_false(): assert False")
     result = testdir.runpytest("-v")
     result.stdout.fnmatch_lines(
         [
@@ -129,5 +146,19 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
             )
         ]
     )
-    assert result.ret == 0
-    _assert_result_outcomes(result, passed=1)
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, failed=1)
+
+
+def test_one_dynamic_rerun_by_default(testdir):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = * * * * * *
+    """
+    )
+
+    testdir.makepyfile("def test_always_false(): assert False")
+    result = testdir.runpytest("-v")
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, dynamic_rerun=1, failed=1)
