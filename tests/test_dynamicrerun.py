@@ -76,3 +76,27 @@ def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
     result.stdout.fnmatch_lines(
         ["*Rerun attempts must be a positive integer. Using default value 1*"]
     )
+
+
+@pytest.mark.parametrize(
+    "rerun_schedule", [0, -1, 2.23, "foobar", "12 AM EST", "* * * * C *"]
+)
+def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = {}
+    """.format(
+            rerun_schedule
+        )
+    )
+
+    testdir.makepyfile("def test_always_true(): assert True")
+    result = testdir.runpytest("-v")
+    result.stdout.fnmatch_lines(
+        [
+            "*Can't parse invalid dynamic rerun schedule '{}'. Ignoring dynamic rerun schedule.*".format(
+                rerun_schedule
+            )
+        ]
+    )

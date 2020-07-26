@@ -65,7 +65,15 @@ def _get_dynamic_rerun_schedule_arg(item):
     else:
         # fall back to ini config if no command line switch provided
         dynamic_rerun_arg = item.session.config.getini("dynamic_rerun_schedule")
-    warnings.warn(dynamic_rerun_arg)
+
+    if dynamic_rerun_arg is not None and not croniter.is_valid(dynamic_rerun_arg):
+        warnings.warn(
+            "Can't parse invalid dynamic rerun schedule '{}'. Ignoring dynamic rerun schedule.".format(
+                dynamic_rerun_arg
+            )
+        )
+        dynamic_rerun_arg = None
+
     return dynamic_rerun_arg
 
 
