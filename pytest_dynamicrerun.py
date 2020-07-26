@@ -1,5 +1,6 @@
 import re
 import time
+import warnings
 from datetime import datetime
 
 from _pytest.runner import runtestprotocol
@@ -15,7 +16,7 @@ def _add_dynamic_rerun_attempts_flag(parser):
         "--dynamic-rerun-attempts",
         action="store",
         dest="dynamic_rerun_attempts",
-        default=1,
+        default=None,
         help="Set the amount of times reruns should be attempted ( defaults to 1 )",
     )
 
@@ -61,14 +62,32 @@ def _get_dynamic_rerun_schedule_arg(item):
     dynamic_rerun_arg = None
     if item.session.config.option.dynamic_rerun_schedule:
         dynamic_rerun_arg = str(item.session.config.option.dynamic_rerun_schedule)
+    else:
+        # fall back to ini config if no command line switch provided
+        dynamic_rerun_arg = item.session.config.getini("dynamic_rerun_schedule")
+    warnings.warn(dynamic_rerun_arg)
     return dynamic_rerun_arg
 
 
 def _get_dynamic_rerun_attempts_arg(item):
+    warnings_text = "Rerun attempts must be a positive integer. Using default value {}".format(
+        DEFAULT_RERUN_ATTEMPTS
+    )
+
     if item.session.config.option.dynamic_rerun_attempts:
-        return item.session.config.option.dynamic_rerun_attempts
+        rerun_attempts = item.session.config.option.dynamic_rerun_attempts
     else:
-        return DEFAULT_RERUN_ATTEMPTS
+        rerun_attempts = item.session.config.getini("dynamic_rerun_attempts")
+
+    try:
+        rerun_attempts = int(rerun_attempts)
+    except ValueError:
+        warnings.warn(warnings_text)
+        rerun_attempts = DEFAULT_RERUN_ATTEMPTS
+
+    if rerun_attempts <= 0:
+        warnings.warn(warnings_text)
+        rerun_attempts = DEFAULT_RERUN_ATTEMPTS
 
 
 def _get_dynamic_rerun_errors_arg(item):

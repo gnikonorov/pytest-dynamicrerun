@@ -17,6 +17,7 @@ def test_help_text_contains_plugin_options(testdir):
     assert result.ret == 0
 
 
+# TODO: Add similar test but for flags
 @pytest.mark.parametrize(
     "ini_key_name,ini_key_set_value,ini_key_fetch_value",
     [
@@ -55,3 +56,23 @@ def test_plugin_options_are_ini_configurable(
     result = testdir.runpytest("-v")
     result.stdout.fnmatch_lines(["*::test_ini_key_fetch PASSED*"])
     assert result.ret == 0
+
+
+# TODO: test to make sure default value is actually selected
+@pytest.mark.parametrize("rerun_amount", [0, -1, 2.23, "foobar"])
+def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = * * * * * *
+        dynamic_rerun_attempts = {}
+    """.format(
+            rerun_amount
+        )
+    )
+
+    testdir.makepyfile("def test_always_true(): assert True")
+    result = testdir.runpytest("-v")
+    result.stdout.fnmatch_lines(
+        ["*Rerun attempts must be a positive integer. Using default value 1*"]
+    )

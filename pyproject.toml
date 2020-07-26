@@ -1,6 +1,6 @@
 [build-system]
 requires = [
   "croniter==0.3.34",
-  "setuptools>=49.2",
+  "setuptools>=40.0",
 ]
 build-backend = "setuptools.build_meta"
