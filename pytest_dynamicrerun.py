@@ -38,6 +38,7 @@ def _add_dynamic_rerun_schedule_flag(parser):
     parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
 
 
+# TODO: Check if this is errors or any freeform text
 def _add_dynamic_rerun_errors_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
