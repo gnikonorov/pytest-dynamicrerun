@@ -146,8 +146,12 @@ def pytest_runtest_protocol(item, nextitem):
 
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
+
+    all_stages_passed = True
     for report in reports:
         if report.failed:
+            all_stages_passed = False
+
             will_run_again = (
                 item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
             )
@@ -156,8 +160,14 @@ def pytest_runtest_protocol(item, nextitem):
                 report.outcome = "dynamically_rerun"
                 if item not in item.session.dynamic_rerun_items:
                     item.session.dynamic_rerun_items.append(item)
+
         item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
+
+    if all_stages_passed:
+        if item in item.session.dynamic_rerun_items:
+            item.session.dynamic_rerun_items.remove(item)
+        return True
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:

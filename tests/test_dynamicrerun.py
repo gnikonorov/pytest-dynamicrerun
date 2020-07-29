@@ -14,6 +14,7 @@ def _assert_result_outcomes(
 
 def _check_outcome_field(outcomes, field_name, expected_value):
     field_value = outcomes.get(field_name, 0)
+    expected_value = int(expected_value)
     assert (
         field_value == expected_value
     ), "outcomes.{} has unexpected value. Expected '{}' but got '{}'".format(
@@ -169,7 +170,38 @@ def test_no_dynamic_reruns_by_default(testdir):
     _assert_result_outcomes(result, failed=1)
 
 
-def test_success_stops_dynamic_rerun_attempts(testdir):
+@pytest.mark.parametrize(
+    "pytest_file,expected_reruns",
+    [
+        (
+            """
+foo = 0
+def test_foo():
+    global foo
+    foo += 1
+    assert foo == 2""",
+            "1",
+        ),
+        (
+            """
+foo = 0
+def test_foo():
+    global foo
+    assert foo == 0""",
+            "0",
+        ),
+        (
+            """
+foo = 0
+def test_foo():
+    global foo
+    foo += 1
+    assert foo == 20""",
+            "19",
+        ),
+    ],
+)
+def test_success_stops_dynamic_rerun_attempts(testdir, pytest_file, expected_reruns):
     testdir.makeini(
         """
         [pytest]
@@ -178,8 +210,8 @@ def test_success_stops_dynamic_rerun_attempts(testdir):
     """
     )
 
-    testdir.makepyfile("def test_always_true(): assert True")
+    testdir.makepyfile(pytest_file)
     result = testdir.runpytest("-v")
     assert result.ret == pytest.ExitCode.OK
 
-    _assert_result_outcomes(result, passed=1)
+    _assert_result_outcomes(result, dynamic_rerun=expected_reruns, passed=1)
