@@ -39,6 +39,7 @@ def _add_dynamic_rerun_schedule_flag(parser):
 
 
 # TODO: Check if this is errors or any freeform text
+# TODO: Add tests for this flag and finish implementing it
 def _add_dynamic_rerun_errors_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(

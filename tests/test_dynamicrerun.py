@@ -38,7 +38,26 @@ def test_help_text_contains_plugin_options(testdir):
     assert result.ret == 0
 
 
-# TODO: Add similar test but for flags
+# TODO: Add tests for dynamic_rerun_errors flag
+def test_plugin_flags_are_recognized(testdir):
+    testdir.makepyfile("def test_assert_false(): assert False")
+
+    dynamic_rerun_attempts = 5
+    failed_amount = 1
+    result = testdir.runpytest(
+        "-v",
+        "--dynamic-rerun-attempts={}".format(dynamic_rerun_attempts),
+        "--dynamic-rerun-schedule=* * * * * *",
+    )
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(
+        result,
+        dynamic_rerun=dynamic_rerun_attempts - failed_amount,
+        failed=failed_amount,
+    )
+
+
 @pytest.mark.parametrize(
     "ini_key_name,ini_key_set_value,ini_key_fetch_value",
     [
