@@ -1,4 +1,3 @@
-import copy
 import re
 import time
 import warnings
@@ -145,31 +144,27 @@ def pytest_runtest_protocol(item, nextitem):
     if dynamic_rerun_attempts_arg is None:
         return
 
-    if item.session.num_dynamic_reruns_kicked_off > dynamic_rerun_attempts_arg:
-        return True
-
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
     for report in reports:
-        will_run_again = (
-            item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
-        )
         if report.failed:
+            will_run_again = (
+                item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
+            )
+
             if will_run_again and _is_rerunnable_error(item, report):
                 report.outcome = "dynamically_rerun"
-                item.ihook.pytest_runtest_logreport(report=report)
-                # TODO: Need to properly copy this item object.
-                #       If I can't copy it, its duplicated in report.
-                #       Pytest issue raised: https://github.com/pytest-dev/pytest/issues/7543
-                item.session.dynamic_rerun_items.append(copy.copy(item))
-            else:
-                report.outcome = "failed"
-                item.ihook.pytest_runtest_logreport(report=report)
+                if item not in item.session.dynamic_rerun_items:
+                    item.session.dynamic_rerun_items.append(item)
+        item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:
         item.session.num_dynamic_reruns_kicked_off += 1
+        if item.session.num_dynamic_reruns_kicked_off > dynamic_rerun_attempts_arg:
+            return True
+
         now_time = datetime.now()
         # NOTE: in the readme note that croniter does second repeats
         #       see https://github.com/kiorky/croniter#about-second-repeats
@@ -188,7 +183,10 @@ def pytest_runtest_protocol(item, nextitem):
 
 def pytest_sessionstart(session):
     session.dynamic_rerun_items = []
-    session.num_dynamic_reruns_kicked_off = 0
+
+    # NOTE: start count at 1 instead of 0 since we are on the first run
+    #       so, if we say we want 2 dynamic run attempts, that means we want 2 test runs
+    session.num_dynamic_reruns_kicked_off = 1
 
 
 def pytest_terminal_summary(terminalreporter):
