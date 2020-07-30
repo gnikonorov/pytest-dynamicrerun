@@ -28,17 +28,17 @@ def test_help_text_contains_plugin_options(testdir):
         [
             "dynamicrerun:",
             "*--dynamic-rerun-attempts=DYNAMIC_RERUN_ATTEMPTS",
-            "*--dynamic-rerun-errors=DYNAMIC_RERUN_ERRORS",
+            "*--dynamic-rerun-triggers=DYNAMIC_RERUN_TRIGGERS",
             "*--dynamic-rerun-schedule=DYNAMIC_RERUN_SCHEDULE",
             "*dynamic_rerun_attempts (string):",
-            "*dynamic_rerun_errors (linelist):",
+            "*dynamic_rerun_triggers (linelist):",
             "*dynamic_rerun_schedule (string):",
         ]
     )
     assert result.ret == 0
 
 
-# TODO: Add tests for dynamic_rerun_errors flag
+# TODO: Add tests for dynamic_rerun_triggers flag
 def test_plugin_flags_are_recognized(testdir):
     testdir.makepyfile("def test_assert_false(): assert False")
 
@@ -62,9 +62,9 @@ def test_plugin_flags_are_recognized(testdir):
     "ini_key_name,ini_key_set_value,ini_key_fetch_value",
     [
         ("dynamic_rerun_attempts", "213", "'213'"),
-        ("dynamic_rerun_errors", "ValueError", "['ValueError']"),
+        ("dynamic_rerun_triggers", "ValueError", "['ValueError']"),
         (
-            "dynamic_rerun_errors",
+            "dynamic_rerun_triggers",
             "ValueError\n\tAssertionError",
             "['ValueError', 'AssertionError']",
         ),

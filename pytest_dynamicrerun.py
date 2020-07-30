@@ -38,21 +38,23 @@ def _add_dynamic_rerun_schedule_flag(parser):
     parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
 
 
-# TODO: Check if this is errors or any freeform text
 # TODO: Add tests for this flag and finish implementing it
-def _add_dynamic_rerun_errors_flag(parser):
+#       By default all failures should force a rerun
+#       If we pass in a value to this flag, any output emitted by pytest
+#       that matches the text should trigger a rerun and all other failures should be hard failures
+def _add_dynamic_rerun_triggers_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
-        "--dynamic-rerun-errors",
+        "--dynamic-rerun-triggers",
         action="append",
-        dest="dynamic_rerun_errors",
+        dest="dynamic_rerun_triggers",
         default=None,
-        help="Set the errors that will be dynamically rerun ( by default all errors are dynamically rerun )",
+        help="Set pytest output that will trigger dynamic reruns. By default all failing tests are dynamically rerun",
     )
 
     parser.addini(
-        "dynamic_rerun_errors",
-        "default value for --dyamic-rerun-errors",
+        "dynamic_rerun_triggers",
+        "default value for --dyamic-rerun-triggers",
         type="linelist",
     )
 
@@ -102,22 +104,22 @@ def _get_dynamic_rerun_attempts_arg(item):
     return rerun_attempts
 
 
-def _get_dynamic_rerun_errors_arg(item):
-    dynamic_rerun_errors = None
-    if item.session.config.option.dynamic_rerun_errors:
-        dynamic_rerun_errors = item.session.config.option.dynamic_rerun_errors
-    return dynamic_rerun_errors
+def _get_dynamic_rerun_triggers_arg(item):
+    dynamic_rerun_triggers = None
+    if item.session.config.option.dynamic_rerun_triggers:
+        dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
+    return dynamic_rerun_triggers
 
 
 def _is_rerunnable_error(item, report):
     if not report.failed:
         return False
 
-    dynamic_rerun_errors = _get_dynamic_rerun_errors_arg(item)
-    if not dynamic_rerun_errors:
+    dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
+    if not dynamic_rerun_triggers:
         return True
 
-    for rerun_regex in dynamic_rerun_errors:
+    for rerun_regex in dynamic_rerun_triggers:
         if re.search(rerun_regex, report.longrepr.reprcrash.message):
             return True
 
@@ -126,7 +128,7 @@ def _is_rerunnable_error(item, report):
 
 def pytest_addoption(parser):
     _add_dynamic_rerun_attempts_flag(parser)
-    _add_dynamic_rerun_errors_flag(parser)
+    _add_dynamic_rerun_triggers_flag(parser)
     _add_dynamic_rerun_schedule_flag(parser)
 
 
