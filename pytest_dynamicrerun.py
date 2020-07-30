@@ -42,6 +42,8 @@ def _add_dynamic_rerun_schedule_flag(parser):
 #       By default all failures should force a rerun
 #       If we pass in a value to this flag, any output emitted by pytest
 #       that matches the text should trigger a rerun and all other failures should be hard failures
+# TODO: As a follow up we can let each error define its own rerun amount here. But that should not be
+#       part of the initial pass
 def _add_dynamic_rerun_triggers_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
@@ -108,6 +110,7 @@ def _get_dynamic_rerun_triggers_arg(item):
     dynamic_rerun_triggers = None
     if item.session.config.option.dynamic_rerun_triggers:
         dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
+
     return dynamic_rerun_triggers
 
 

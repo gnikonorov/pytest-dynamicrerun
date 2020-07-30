@@ -38,7 +38,7 @@ def test_help_text_contains_plugin_options(testdir):
     assert result.ret == 0
 
 
-# TODO: Add tests for dynamic_rerun_triggers flag
+# TODO: Add check to make sure dynamic_rerun_triggers flag respected
 def test_plugin_flags_are_recognized(testdir):
     testdir.makepyfile("def test_assert_false(): assert False")
 
@@ -148,47 +148,6 @@ def test_positive_integer_dynamic_rerun_attempts_accepted(testdir, rerun_amount)
     )
 
 
-# TODO: test to make sure default value is actually selected
-@pytest.mark.parametrize(
-    "rerun_schedule", [0, -1, 2.23, "foobar", "12 AM EST", "* * * * C *"]
-)
-def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
-    testdir.makeini(
-        """
-        [pytest]
-        dynamic_rerun_schedule = {}
-    """.format(
-            rerun_schedule
-        )
-    )
-
-    testdir.makepyfile("def test_always_false(): assert False")
-    result = testdir.runpytest("-v")
-    result.stdout.fnmatch_lines(
-        [
-            "*Can't parse invalid dynamic rerun schedule '{}'. Ignoring dynamic rerun schedule.*".format(
-                rerun_schedule
-            )
-        ]
-    )
-    assert result.ret == pytest.ExitCode.TESTS_FAILED
-    _assert_result_outcomes(result, failed=1)
-
-
-def test_no_dynamic_reruns_by_default(testdir):
-    testdir.makeini(
-        """
-        [pytest]
-        dynamic_rerun_schedule = * * * * * *
-    """
-    )
-
-    testdir.makepyfile("def test_always_false(): assert False")
-    result = testdir.runpytest("-v")
-    assert result.ret == pytest.ExitCode.TESTS_FAILED
-    _assert_result_outcomes(result, failed=1)
-
-
 @pytest.mark.parametrize(
     "pytest_file,expected_reruns",
     [
@@ -234,3 +193,48 @@ def test_success_stops_dynamic_rerun_attempts(testdir, pytest_file, expected_rer
     assert result.ret == pytest.ExitCode.OK
 
     _assert_result_outcomes(result, dynamic_rerun=expected_reruns, passed=1)
+
+
+# TODO: add tests for different valid cron inputs to schedule, right now only default is used
+# TODO: test to make sure default value is actually selected
+@pytest.mark.parametrize(
+    "rerun_schedule", [0, -1, 2.23, "foobar", "12 AM EST", "* * * * C *"]
+)
+def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = {}
+    """.format(
+            rerun_schedule
+        )
+    )
+
+    testdir.makepyfile("def test_always_false(): assert False")
+    result = testdir.runpytest("-v")
+    result.stdout.fnmatch_lines(
+        [
+            "*Can't parse invalid dynamic rerun schedule '{}'. Ignoring dynamic rerun schedule.*".format(
+                rerun_schedule
+            )
+        ]
+    )
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, failed=1)
+
+
+def test_no_dynamic_reruns_by_default(testdir):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = * * * * * *
+    """
+    )
+
+    testdir.makepyfile("def test_always_false(): assert False")
+    result = testdir.runpytest("-v")
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, failed=1)
+
+
+# TODO: add tests for dynamic rerun triggers flag
