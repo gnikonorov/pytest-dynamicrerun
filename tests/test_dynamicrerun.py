@@ -237,4 +237,20 @@ def test_no_dynamic_reruns_by_default(testdir):
     _assert_result_outcomes(result, failed=1)
 
 
-# TODO: add tests for dynamic rerun triggers flag
+# TODO: add more tests for dynamic rerun triggers flag
+def test_errors_no_longer_rerun_by_default_when_dynamic_rerun_triggers_provided(
+    testdir,
+):
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_schedule = * * * * * *
+        dynamic_rerun_attempts = 99
+        dynamic_rerun_triggers = this will trigger a rerun
+    """
+    )
+
+    testdir.makepyfile("def test_always_false(): assert False")
+    result = testdir.runpytest("-v")
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(result, failed=1)

@@ -110,6 +110,8 @@ def _get_dynamic_rerun_triggers_arg(item):
     dynamic_rerun_triggers = None
     if item.session.config.option.dynamic_rerun_triggers:
         dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
+    else:
+        dynamic_rerun_triggers = item.session.config.getini("dynamic_rerun_triggers")
 
     return dynamic_rerun_triggers
 
@@ -123,7 +125,9 @@ def _is_rerun_triggering_report(item, report):
         return report.failed
 
     for rerun_regex in dynamic_rerun_triggers:
-        if re.search(rerun_regex, report.longrepr.reprcrash.message):
+        if report.longrepr and re.search(
+            rerun_regex, report.longrepr.reprcrash.message
+        ):
             return True
 
         for section in report.sections:
