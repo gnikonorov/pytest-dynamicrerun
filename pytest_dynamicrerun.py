@@ -117,8 +117,7 @@ def _get_dynamic_rerun_triggers_arg(item):
 
 
 # TODO: figure out how to get warnings?
-# TODO: Write tests: The idea is to only rerun errors unless dynamic rerun trace is given,
-#       at which point we rerun on the trace
+# TODO: Test to see if we can use regex chars  ( *, $, ^, etc )
 def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
@@ -172,13 +171,23 @@ def pytest_runtest_protocol(item, nextitem):
 
     should_queue_for_rerun = False
     for report in reports:
-        rerun_triggered = _is_rerun_triggering_report(item, report)
-        if will_run_again and rerun_triggered:
-            should_queue_for_rerun = True
+        rerun_triggering = _is_rerun_triggering_report(item, report)
+        if rerun_triggering:
+            if will_run_again:
+                should_queue_for_rerun = True
 
-            report.outcome = "dynamically_rerun"
-            if item not in item.session.dynamic_rerun_items:
-                item.session.dynamic_rerun_items.append(item)
+                report.outcome = "dynamically_rerun"
+                if item not in item.session.dynamic_rerun_items:
+                    item.session.dynamic_rerun_items.append(item)
+
+                if not report.failed:
+                    item.ihook.pytest_runtest_logreport(report=report)
+                    break
+            elif report.when == "call" and not report.failed:
+                # only mark 'call' as failed to avoid over-reporting errors
+                # 'call' was picked over setup or teardown since it makes the most sense
+                # to mark the actual execution as bad in passing test cases
+                report.outcome = "failed"
 
         item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
