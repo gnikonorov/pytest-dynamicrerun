@@ -114,17 +114,26 @@ def _get_dynamic_rerun_triggers_arg(item):
     return dynamic_rerun_triggers
 
 
-def _is_rerunnable_error(item, report):
-    if not report.failed:
-        return False
-
+# TODO: figure out how to get warnings?
+# TODO: Write tests: The idea is to only rerun errors unless dynamic rerun trace is given,
+#       at which point we rerun on the trace
+def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
-        return True
+        return report.failed
 
     for rerun_regex in dynamic_rerun_triggers:
         if re.search(rerun_regex, report.longrepr.reprcrash.message):
             return True
+
+        for section in report.sections:
+            section_title = section[0]
+            section_text = section[1]
+            if section_title in [
+                "Captured stdout call",
+                "Captured stderr call",
+            ] and re.search(rerun_regex, section_text):
+                return True
 
     return False
 
@@ -153,24 +162,24 @@ def pytest_runtest_protocol(item, nextitem):
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
 
-    all_stages_passed = True
+    will_run_again = (
+        item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
+    )
+
+    should_queue_for_rerun = False
     for report in reports:
-        if report.failed:
-            all_stages_passed = False
+        rerun_triggered = _is_rerun_triggering_report(item, report)
+        if will_run_again and rerun_triggered:
+            should_queue_for_rerun = True
 
-            will_run_again = (
-                item.session.num_dynamic_reruns_kicked_off < dynamic_rerun_attempts_arg
-            )
-
-            if will_run_again and _is_rerunnable_error(item, report):
-                report.outcome = "dynamically_rerun"
-                if item not in item.session.dynamic_rerun_items:
-                    item.session.dynamic_rerun_items.append(item)
+            report.outcome = "dynamically_rerun"
+            if item not in item.session.dynamic_rerun_items:
+                item.session.dynamic_rerun_items.append(item)
 
         item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
-    if all_stages_passed:
+    if not should_queue_for_rerun:
         if item in item.session.dynamic_rerun_items:
             item.session.dynamic_rerun_items.remove(item)
         return True
