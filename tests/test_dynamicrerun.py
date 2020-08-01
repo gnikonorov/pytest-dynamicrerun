@@ -1,8 +1,6 @@
 import pytest
 
 
-# TODO: For all tests, check the summary for dynamic reruns
-#       So, the end that reads like '====================== 1 failed, 98 dynamicrerun in 0.30s ======================'
 def _assert_result_outcomes(
     result, passed=0, skipped=0, failed=0, error=0, dynamic_rerun=0
 ):
@@ -104,6 +102,79 @@ def test_plugin_options_are_ini_configurable(
     result.stdout.fnmatch_lines(["*::test_ini_key_fetch PASSED*"])
     assert result.ret == 0
     _assert_result_outcomes(result, passed=1)
+
+
+@pytest.mark.parametrize(
+    "ini_text,test_body,would_normally_pass",
+    [
+        (
+            """
+            [pytest]
+            dynamic_rerun_schedule = * * * * * *
+            dynamic_rerun_attempts = {}
+            dynamic_rerun_triggers = I will pass""",
+            "print('I will pass')",
+            True,
+        ),
+        (
+            """
+            [pytest]
+            dynamic_rerun_schedule = * * * * * *
+            dynamic_rerun_attempts = {}""",
+            "assert False",
+            False,
+        ),
+    ],
+)
+def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass):
+    dynamic_rerun_attempts = 5
+    failed_amount = 1
+    dynamic_rerun_amount = dynamic_rerun_attempts - failed_amount
+
+    testdir.makeini(ini_text.format(dynamic_rerun_attempts))
+
+    test_file_name = "test_output_properly_shown.py"
+    test_name = "test_output"
+    testdir.makepyfile("def {}(): {}".format(test_name, test_body))
+
+    expected_output = []
+    expected_output.append("=* test session starts *=")
+    for rerun_attempt in range(dynamic_rerun_amount):
+        expected_output.append(
+            "*{}::{} DYNAMIC_RERUN*".format(test_file_name, test_name)
+        )
+    expected_output.append("*{}::{} FAILED*".format(test_file_name, test_name))
+
+    expected_output.append("=* FAILURES *=")
+    expected_output.append("_* {} *_".format(test_name))
+
+    expected_output.append("=* Dynamically rerun tests *=")
+    for rerun_attempt in range(dynamic_rerun_amount):
+        expected_output.append("*{}::{}".format(test_file_name, test_name))
+
+    expected_output.append("=* short test summary info *=")
+    if would_normally_pass:
+        expected_output.append("FAILED {}::{}*".format(test_file_name, test_name))
+    else:
+        expected_output.append(
+            "FAILED {}::{} - {}*".format(test_file_name, test_name, test_body)
+        )
+
+    expected_output.append(
+        "=*{} failed, {} dynamicrerun in *s *=".format(
+            failed_amount, dynamic_rerun_amount
+        )
+    )
+
+    result = testdir.runpytest("-v")
+    result.stdout.fnmatch_lines(expected_output)
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    _assert_result_outcomes(
+        result,
+        dynamic_rerun=dynamic_rerun_attempts - failed_amount,
+        failed=failed_amount,
+    )
 
 
 @pytest.mark.parametrize("rerun_amount", [0, -1, 2.23, "foobar"])
