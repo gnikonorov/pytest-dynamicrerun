@@ -1,3 +1,11 @@
+# NOTE: Warning support is broken ATM and may be broken until some pytest patches are made upstream
+#       For now, this does NOT support warnings but here are 2 possible solutions:
+#           We could use a combination of a global variable and `pytest_warning_captured`. This has issues
+#           as it looks like warnings are not always processed with every run but only once upfront, and needs an
+#           upstream patch.
+#           Alternatively the warnings should be populated on the 'item' object which would be preferred.
+#           This would need an upstream patch though the benefit of this approach is that we can neatly access
+#           the warnings without checking pytest warning recorded
 import re
 import time
 import warnings
