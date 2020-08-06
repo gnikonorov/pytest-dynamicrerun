@@ -14,33 +14,28 @@ pytest-dynamicrerun
     :target: https://travis-ci.org/gnikonorov/pytest-dynamicrerun
     :alt: See Build Status on Travis CI
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/gnikonorov/pytest-dynamicrerun?branch=master
-    :target: https://ci.appveyor.com/project/gnikonorov/pytest-dynamicrerun/branch/master
-    :alt: See Build Status on AppVeyor
+pytest-dynamicrerun is a `pytest` plugin to rerun tests dynamically based off of test outcome and output.
 
-A pytest plugin to pause test execution for a dynamic amount of time
-
-----
-
-This `pytest`_ plugin was generated with `Cookiecutter`_ along with `@hackebrot`_'s `cookiecutter-pytest-plugin`_ template.
-
-
-Features
---------
-
-* TODO
-
+Note this plugn is currently under active development. You are encouraged to use it, but all functionality may not work as expected and behavior may change at any time without warning.
 
 Requirements
 ------------
 
-* TODO
+This plugin is being developed with the following:
+
+* py35
+* py36
+* py37
+* py38
+* py39
+* pypy3
+* pytest >= 5.0.0
 
 
 Installation
 ------------
 
-You can install "pytest-dynamicrerun" via `pip`_ from `PyPI`_::
+This plugin is not yet published to `PyPI`. You can install it locally by cloning this repo and running::
 
     $ pip install pytest-dynamicrerun
 
@@ -52,8 +47,9 @@ Usage
 
 Contributing
 ------------
-Contributions are very welcome. Tests can be run with `tox`_, please ensure
-the coverage at least stays the same before you submit a pull request.
+Contributions are always welcome. Tests can be run with `tox`_.
+
+`pre-commit` is used to ensure basic checks pass.
 
 License
 -------
@@ -78,3 +74,4 @@ If you encounter any problems, please `file an issue`_ along with a detailed des
 .. _`tox`: https://tox.readthedocs.io/en/latest/
 .. _`pip`: https://pypi.org/project/pip/
 .. _`PyPI`: https://pypi.org/project
+.. `pre-commit`: https://pre-commit.com/
