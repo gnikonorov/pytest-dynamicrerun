@@ -219,6 +219,11 @@ def pytest_runtest_protocol(item, nextitem):
         time_delta = time_iterator.get_next(datetime) - now_time
         time.sleep(time_delta.seconds)
 
+        # TODO: Add tests for sleep times
+        if not hasattr(item, "sleep_times"):
+            item.sleep_times = []
+        item.sleep_times.append(time_delta.seconds)
+
         rerun_items = item.session.dynamic_rerun_items
         for i, item in enumerate(rerun_items):
             next_item = rerun_items[i + 1] if i + 1 < len(rerun_items) else None

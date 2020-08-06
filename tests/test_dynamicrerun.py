@@ -269,7 +269,7 @@ def test_success_stops_dynamic_rerun_attempts(testdir, pytest_file, expected_rer
 
 
 # TODO: add tests for different valid cron inputs to schedule, right now only default is used
-# TODO: test to make sure default value is actually selected
+# TODO: test to make sure default value is actually selected ( use item.sleep_times )
 @pytest.mark.parametrize(
     "rerun_schedule", [0, -1, 2.23, "foobar", "12 AM EST", "* * * * C *"]
 )
@@ -311,7 +311,7 @@ def test_no_dynamic_reruns_by_default(testdir):
 
 
 # TODO: add more tests for dynamic rerun triggers flag
-#       Still need tests for passing multiple triggers and also warnings when we implement warning checks
+#       - Still need tests for passing multiple triggers
 def test_errors_no_longer_rerun_by_default_when_dynamic_rerun_triggers_provided(
     testdir,
 ):
