@@ -310,8 +310,6 @@ def test_no_dynamic_reruns_by_default(testdir):
     _assert_result_outcomes(result, failed=1)
 
 
-# TODO: add more tests for dynamic rerun triggers flag
-#       - Still need tests for passing multiple triggers
 def test_errors_no_longer_rerun_by_default_when_dynamic_rerun_triggers_provided(
     testdir,
 ):
@@ -448,6 +446,57 @@ def test_can_handle_multiple_dynamic_rerun_triggers(
     testdir.makepyfile(
         "def test_all_seems_well_but(): print('{}')".format(print_output)
     )
+    result = testdir.runpytest("-v")
+
+    if should_rerun:
+        failed_amount = 1
+        dynamic_rerun_amount = rerun_amount - failed_amount
+        passed_amount = 0
+
+        assert result.ret == pytest.ExitCode.TESTS_FAILED
+    else:
+        failed_amount = 0
+        dynamic_rerun_amount = 0
+        passed_amount = 1
+
+        assert result.ret == pytest.ExitCode.OK
+
+    _assert_result_outcomes(
+        result,
+        dynamic_rerun=dynamic_rerun_amount,
+        failed=failed_amount,
+        passed=passed_amount,
+    )
+
+
+@pytest.mark.parametrize(
+    "rerun_regex,should_rerun",
+    [
+        ("My", True),
+        ("print", True),
+        ("^print", False),
+        ("^My", True),
+        ("output$", True),
+        ("^output$", False),
+        ("My.*output", True),
+        ("^My.*output$", True),
+        ("^My output$", False),
+    ],
+)
+def test_dynamic_rerun_triggers_can_handle_regexes(testdir, rerun_regex, should_rerun):
+    rerun_amount = 99
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_attempts = {}
+        dynamic_rerun_schedule = * * * * * *
+        dynamic_rerun_triggers = {}
+    """.format(
+            rerun_amount, rerun_regex
+        )
+    )
+
+    testdir.makepyfile("def test_all_seems_well_but(): print('My print output')")
     result = testdir.runpytest("-v")
 
     if should_rerun:

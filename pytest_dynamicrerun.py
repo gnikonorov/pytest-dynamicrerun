@@ -125,7 +125,6 @@ def _get_dynamic_rerun_triggers_arg(item):
 
 
 # TODO: figure out how to get warnings?
-# TODO: Test to see if we can use regex chars  ( *, $, ^, etc )
 def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
