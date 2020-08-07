@@ -418,3 +418,54 @@ def test_stderr_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
     _assert_result_outcomes(
         result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount
     )
+
+
+@pytest.mark.parametrize(
+    "print_output,should_rerun",
+    [
+        ("Rerun on this text", True),
+        ("Also rerun on this one", True),
+        ("But not on this one", False),
+    ],
+)
+def test_can_handle_multiple_dynamic_rerun_triggers(
+    testdir, print_output, should_rerun
+):
+    rerun_amount = 99
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_attempts = {}
+        dynamic_rerun_schedule = * * * * * *
+        dynamic_rerun_triggers = Rerun on this text
+            Also rerun on this one
+            Finally also check this one
+    """.format(
+            rerun_amount
+        )
+    )
+
+    testdir.makepyfile(
+        "def test_all_seems_well_but(): print('{}')".format(print_output)
+    )
+    result = testdir.runpytest("-v")
+
+    if should_rerun:
+        failed_amount = 1
+        dynamic_rerun_amount = rerun_amount - failed_amount
+        passed_amount = 0
+
+        assert result.ret == pytest.ExitCode.TESTS_FAILED
+    else:
+        failed_amount = 0
+        dynamic_rerun_amount = 0
+        passed_amount = 1
+
+        assert result.ret == pytest.ExitCode.OK
+
+    _assert_result_outcomes(
+        result,
+        dynamic_rerun=dynamic_rerun_amount,
+        failed=failed_amount,
+        passed=passed_amount,
+    )
