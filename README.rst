@@ -73,7 +73,7 @@ Passing a non positive integer value will set the number of rerun attempts to th
 Specifying what to rerun on
 ###########################
 
-By default, all failed tests are rerun. You can change this behavior by either passing the ``--dynamic-rerun-triggers`` flag when invoking ``pytest`` or including the ``dynamic_rerun_triggers`` ini key.
+By default, all failed tests are rerun. You can change this behavior by either passing the ``--dynamic-rerun-triggers`` flag when invoking ``pytest`` or including the ``dynamic_rerun_triggers`` ini key. Note that regular expressions are allowed.
 
 To pass the flag::
 
