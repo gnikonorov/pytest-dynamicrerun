@@ -1,11 +1,14 @@
 dist: bionic
+
 language: python
+
 python:
     - 3.5
     - 3.6
     - 3.7
     - 3.8
     - pypy3
+
 env:
     - PYTEST=5.4.0
     - PYTEST=5.4.1
@@ -13,12 +16,17 @@ env:
     - PYTEST=5.4.3
     - PYTEST=6.0.0
     - PYTEST=6.0.1
+
 install:
     - pip install -q pytest==$PYTEST
     - pip install -q -e .
     - pip install -q pre-commit
     - pre-commit install
+
 script:
     # black does not work on python < 3.6 or pypy
     - if [[ "$TRAVIS_PYTHON_VERSION" > "3.5" ]] && [[ "$TRAVIS_PYTHON_VERSION" != pypy* ]]; then pre-commit run --all-files --show-diff-on-failure; fi
     - py.test
+
+notifications:
+    email: false
