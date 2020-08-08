@@ -30,7 +30,7 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
             assert len(sleep_times_for_item) == {}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
-                assert sleep_time.seconds >= 0 and sleep_time.seconds <= 1
+                assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
     """.format(
             dynamic_rerun_amount
@@ -61,8 +61,8 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
     "rerun_amount,rerun_regex,rerun_schedule,max_wait_seconds,should_rerun",
     [
         (6, "My", "* * * * * *", 1, True),
-        (2, "My", "* * * * * */2", 1, True),
-        (3, "My", "* * * * * */5", 4, True),
+        (2, "My", "* * * * * */2", 2, True),
+        (3, "My", "* * * * * */5", 5, True),
         (9, "^print", "* * * * * *", 1, False),
     ],
 )
@@ -98,7 +98,7 @@ def test_dynamic_rerun_properly_adheres_to_schedule(
                 assert len(sleep_times_for_item) == {}
                 for sleep_time in sleep_times_for_item:
                     assert sleep_time.days == 0
-                    assert sleep_time.seconds >= 0 and sleep_time.seconds <= {}
+                    assert sleep_time.seconds >= 1 and sleep_time.seconds <= {}
                     assert sleep_time.microseconds
             else:
                 assert not session.dynamic_rerun_items

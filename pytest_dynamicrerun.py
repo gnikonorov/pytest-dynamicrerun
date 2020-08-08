@@ -1,3 +1,5 @@
+# TODO: When different rerun schedules for items are supported, figure out how to batch runs.
+#       After this is done, publush to PyPI
 # NOTE: Warning support is broken ATM and may be broken until some pytest patches are made upstream
 #       For now, this does NOT support warnings but here are 2 possible solutions:
 #           We could use a combination of a global variable and `pytest_warning_captured`. This has issues
@@ -10,6 +12,7 @@ import re
 import time
 import warnings
 from datetime import datetime
+from datetime import timedelta
 
 from _pytest.runner import runtestprotocol
 from croniter import croniter
@@ -166,25 +169,28 @@ def _rerun_dynamically_failing_items(
     if session.num_dynamic_reruns_kicked_off > max_allowed_rerun_attempts:
         return True
 
-    # TODO: Add the maditory second slept to the sleep time attributes to properly reflect real sleep time
     # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
     #       multiple times in the same one
     #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
     #       seconds to run, we could end up rerunning the test in the same second it failed without
     #       this required sleep. The same idea applies to other cron formats
-    time.sleep(1)
+    manditory_sleep_time = 1
+    time.sleep(manditory_sleep_time)
 
-    now_time = datetime.now()
-    time_iterator = croniter(dynamic_rerun_schedule, now_time)
+    post_sleep_time = datetime.now()
+    time_iterator = croniter(dynamic_rerun_schedule, post_sleep_time)
 
-    time_delta = time_iterator.get_next(datetime) - now_time
-    time.sleep(time_delta.seconds)
+    next_allowed_run_time = time_iterator.get_next(datetime) - post_sleep_time
+    time.sleep(next_allowed_run_time.total_seconds())
 
     rerun_items = session.dynamic_rerun_items
     for i, item in enumerate(rerun_items):
         if not hasattr(item, "dynamic_rerun_sleep_times"):
             item.dynamic_rerun_sleep_times = []
-        item.dynamic_rerun_sleep_times.append(time_delta)
+        real_sleep_time = (
+            timedelta(seconds=manditory_sleep_time) + next_allowed_run_time
+        )
+        item.dynamic_rerun_sleep_times.append(real_sleep_time)
 
         next_item = rerun_items[i + 1] if i + 1 < len(rerun_items) else None
         pytest_runtest_protocol(item, next_item)
@@ -282,8 +288,3 @@ def pytest_terminal_summary(terminalreporter):
     terminalreporter.write_sep("=", "Dynamically rerun tests")
     for report in terminalreporter.stats.get("dynamicrerun", []):
         terminalreporter.write_line(report.nodeid)
-
-
-# @pytest.fixture
-# def bar(request):
-#    return request.config.option.dest_foo
