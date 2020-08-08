@@ -22,7 +22,7 @@ def test_help_text_contains_plugin_options(testdir):
 def test_plugin_flags_are_recognized(testdir):
     testdir.makepyfile("def test_assert_false(): assert False")
 
-    dynamic_rerun_attempts = 5
+    dynamic_rerun_attempts = 3
     failed_amount = 1
     result = testdir.runpytest(
         "-v",
@@ -107,7 +107,7 @@ def test_plugin_options_are_ini_configurable(
     ],
 )
 def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass):
-    dynamic_rerun_attempts = 5
+    dynamic_rerun_attempts = 3
     failed_amount = 1
     dynamic_rerun_amount = dynamic_rerun_attempts - failed_amount
 

@@ -33,10 +33,10 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
 @pytest.mark.parametrize(
     "rerun_amount,rerun_regex,rerun_schedule,max_wait_seconds,should_rerun",
     [
-        (99, "My", "* * * * * *", 0, True),
-        (2, "My", "* * * * * */10", 9, True),
+        (6, "My", "* * * * * *", 1, True),
+        (2, "My", "* * * * * */2", 1, True),
         (3, "My", "* * * * * */5", 4, True),
-        (55, "^print", "* * * * * *", 0, False),
+        (9, "^print", "* * * * * *", 1, False),
     ],
 )
 def test_dynamic_rerun_properly_adheres_to_schedule(

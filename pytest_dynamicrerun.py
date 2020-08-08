@@ -164,11 +164,16 @@ def _rerun_dynamically_failing_items(
     if session.num_dynamic_reruns_kicked_off > max_allowed_rerun_attempts:
         return True
 
+    # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
+    #       multiple times in the same one
+    #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
+    #       seconds to run, we could end up rerunning the test in the same second it failed without
+    #       this required sleep. The same idea applies to other cron formats
+    time.sleep(1)
+
     now_time = datetime.now()
     time_iterator = croniter(dynamic_rerun_schedule, now_time)
 
-    # TODO: Consider always sleeping at least 1 second for tests that last less than 1 second and thus
-    #       will rerun themselves more times than expected
     time_delta = time_iterator.get_next(datetime) - now_time
     time.sleep(time_delta.seconds)
 

@@ -27,7 +27,7 @@ def test_errors_no_longer_rerun_by_default_when_dynamic_rerun_triggers_provided(
 def test_exceptions_output_checked_by_dynamic_rerun_triggers(
     testdir, rerun_trigger_text
 ):
-    rerun_amount = 99
+    rerun_amount = 3
     testdir.makeini(
         """
         [pytest]
@@ -54,7 +54,7 @@ def test_exceptions_output_checked_by_dynamic_rerun_triggers(
     "rerun_trigger_text", ["Please rerun me", "rerun", "Please", "me"]
 )
 def test_stdout_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
-    rerun_amount = 99
+    rerun_amount = 3
     testdir.makeini(
         """
         [pytest]
@@ -81,7 +81,7 @@ def test_stdout_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
     "rerun_trigger_text", ["Please rerun me", "rerun", "Please", "me"]
 )
 def test_stderr_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
-    rerun_amount = 99
+    rerun_amount = 3
     testdir.makeini(
         """
         [pytest]
@@ -122,7 +122,7 @@ def test_stderr_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
 def test_can_handle_multiple_dynamic_rerun_triggers(
     testdir, print_output, should_rerun
 ):
-    rerun_amount = 99
+    rerun_amount = 3
     testdir.makeini(
         """
         [pytest]
@@ -177,7 +177,7 @@ def test_can_handle_multiple_dynamic_rerun_triggers(
     ],
 )
 def test_dynamic_rerun_triggers_can_handle_regexes(testdir, rerun_regex, should_rerun):
-    rerun_amount = 99
+    rerun_amount = 2
     testdir.makeini(
         """
         [pytest]

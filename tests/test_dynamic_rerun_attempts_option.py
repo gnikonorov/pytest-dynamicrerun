@@ -24,7 +24,7 @@ def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
     _assert_result_outcomes(result, failed=1)
 
 
-@pytest.mark.parametrize("rerun_amount", [1, 2, 10, 5])
+@pytest.mark.parametrize("rerun_amount", [1, 2, 3])
 def test_positive_integer_dynamic_rerun_attempts_accepted(testdir, rerun_amount):
     testdir.makeini(
         """
@@ -73,8 +73,8 @@ foo = 0
 def test_foo():
     global foo
     foo += 1
-    assert foo == 20""",
-            "19",
+    assert foo == 5""",
+            "4",
         ),
     ],
 )
