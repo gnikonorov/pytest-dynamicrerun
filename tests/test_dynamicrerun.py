@@ -84,35 +84,46 @@ def test_plugin_options_are_ini_configurable(
     _assert_result_outcomes(result, passed=1)
 
 
-def test_mark_takes_precendence_over_flags(testdir):
+def test_mark_takes_precedence_over_flags(testdir):
     attempts = 5
     failed_amount = 1
     dynamic_rerun_amount = attempts - failed_amount
+
+    rerun_triggers = "foo"
+    rerun_schedule = "* * * * * *"
 
     testdir.makepyfile(
         """
         import pytest
 
-        @pytest.mark.dynamicrerun(attempts={}, triggers="foo", schedule="* * * * * *")
+        @pytest.mark.dynamicrerun(attempts={}, triggers="{}", schedule="{}")
         def test_assert_false():
             print("foo")
     """.format(
-            attempts
+            attempts, rerun_triggers, rerun_schedule
         )
     )
 
     testdir.makeconftest(
         """
         def pytest_sessionfinish(session, exitstatus):
-            # A little hacky, but we know we can only ever have 1 item
-            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            # a little hacky, but we know we can only ever have 1 item
+            rerun_item = session.dynamic_rerun_items[0]
+
+            # first, check the sleep times
+            sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
             assert len(sleep_times_for_item) == {}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
+
+            # Then, the triggers, schedule, and rerun attempts
+            assert rerun_item.dynamic_rerun_triggers == ["{}"]
+            assert rerun_item.dynamic_rerun_schedule == "{}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
     """.format(
-            dynamic_rerun_amount
+            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
         )
     )
 
@@ -130,35 +141,46 @@ def test_mark_takes_precendence_over_flags(testdir):
     )
 
 
-def test_mark_takes_precendence_over_ini_file(testdir):
+def test_mark_takes_precedence_over_ini_file(testdir):
     attempts = 5
     failed_amount = 1
     dynamic_rerun_amount = attempts - failed_amount
+
+    rerun_triggers = "foo"
+    rerun_schedule = "* * * * * *"
 
     testdir.makepyfile(
         """
         import pytest
 
-        @pytest.mark.dynamicrerun(attempts={}, triggers="foo", schedule="* * * * * *")
+        @pytest.mark.dynamicrerun(attempts={}, triggers="{}", schedule="{}")
         def test_assert_false():
             print("foo")
     """.format(
-            attempts
+            attempts, rerun_triggers, rerun_schedule
         )
     )
 
     testdir.makeconftest(
         """
         def pytest_sessionfinish(session, exitstatus):
-            # A little hacky, but we know we can only ever have 1 item
-            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            # a little hacky, but we know we can only ever have 1 item
+            rerun_item = session.dynamic_rerun_items[0]
+
+            # first, check the sleep times
+            sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
             assert len(sleep_times_for_item) == {}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
+
+            # Then, the triggers, schedule, and rerun attempts
+            assert rerun_item.dynamic_rerun_triggers == ["{}"]
+            assert rerun_item.dynamic_rerun_schedule == "{}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
     """.format(
-            dynamic_rerun_amount
+            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
         )
     )
 
@@ -180,25 +202,36 @@ def test_mark_takes_precendence_over_ini_file(testdir):
     )
 
 
-def test_flags_take_precendence_over_ini_file(testdir):
+def test_flags_take_precedence_over_ini_file(testdir):
     attempts = 5
     failed_amount = 1
     dynamic_rerun_amount = attempts - failed_amount
+
+    rerun_triggers = "foo"
+    rerun_schedule = "* * * * * *"
 
     testdir.makepyfile("def test_assert_false(): print('foo')")
 
     testdir.makeconftest(
         """
         def pytest_sessionfinish(session, exitstatus):
-            # A little hacky, but we know we can only ever have 1 item
-            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            # a little hacky, but we know we can only ever have 1 item
+            rerun_item = session.dynamic_rerun_items[0]
+
+            # first, check the sleep times
+            sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
             assert len(sleep_times_for_item) == {}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
+
+            # Then, the triggers, schedule, and rerun attempts
+            assert rerun_item.dynamic_rerun_triggers == ["{}"]
+            assert rerun_item.dynamic_rerun_schedule == "{}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
     """.format(
-            dynamic_rerun_amount
+            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
         )
     )
 
@@ -214,8 +247,8 @@ def test_flags_take_precendence_over_ini_file(testdir):
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts={}".format(attempts),
-        "--dynamic-rerun-schedule=* * * * * *",
-        "--dynamic-rerun-triggers=foo",
+        "--dynamic-rerun-schedule={}".format(rerun_schedule),
+        "--dynamic-rerun-triggers={}".format(rerun_triggers),
     )
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED

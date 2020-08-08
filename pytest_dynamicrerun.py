@@ -134,6 +134,8 @@ def _get_dynamic_rerun_triggers_arg(item):
     else:
         dynamic_rerun_triggers = item.session.config.getini("dynamic_rerun_triggers")
 
+    if not isinstance(dynamic_rerun_triggers, list):
+        return [dynamic_rerun_triggers]
     return dynamic_rerun_triggers
 
 
@@ -142,7 +144,9 @@ def _is_rerun_triggering_report(item, report):
     if not dynamic_rerun_triggers:
         return report.failed
 
-    for rerun_regex in dynamic_rerun_triggers:
+    item.dynamic_rerun_triggers = dynamic_rerun_triggers
+
+    for rerun_regex in item.dynamic_rerun_triggers:
         # NOTE: Checking for both report.longrepr and reprcrash on report.longrepr is intentional
         report_has_reprcrash = report.longrepr and hasattr(report.longrepr, "reprcrash")
         if report_has_reprcrash and re.search(
@@ -163,10 +167,10 @@ def _is_rerun_triggering_report(item, report):
 
 
 def _rerun_dynamically_failing_items(
-    session, max_allowed_rerun_attempts, dynamic_rerun_schedule
+    session, max_allowed_dynamic_rerun_attempts, dynamic_rerun_schedule
 ):
     session.num_dynamic_reruns_kicked_off += 1
-    if session.num_dynamic_reruns_kicked_off > max_allowed_rerun_attempts:
+    if session.num_dynamic_reruns_kicked_off > max_allowed_dynamic_rerun_attempts:
         return True
 
     # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
@@ -224,15 +228,19 @@ def pytest_runtest_protocol(item, nextitem):
     if dynamic_rerun_schedule is None:
         return
 
-    max_allowed_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
-    if max_allowed_rerun_attempts is None:
+    max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
+    if max_allowed_dynamic_rerun_attempts is None:
         return
+
+    item.dynamic_rerun_schedule = dynamic_rerun_schedule
+    item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
 
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
 
     will_run_again = (
-        item.session.num_dynamic_reruns_kicked_off < max_allowed_rerun_attempts
+        item.session.num_dynamic_reruns_kicked_off
+        < item.max_allowed_dynamic_rerun_attempts
     )
 
     should_queue_for_rerun = False
@@ -264,7 +272,9 @@ def pytest_runtest_protocol(item, nextitem):
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:
         return _rerun_dynamically_failing_items(
-            item.session, max_allowed_rerun_attempts, dynamic_rerun_schedule
+            item.session,
+            item.max_allowed_dynamic_rerun_attempts,
+            item.dynamic_rerun_schedule,
         )
 
     return True
