@@ -124,6 +124,11 @@ def _get_dynamic_rerun_triggers_arg(item):
     return dynamic_rerun_triggers
 
 
+# TODO: Implement markers to override global configs
+def _get_closest_marker(item):
+    pass
+
+
 def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
@@ -239,10 +244,15 @@ def pytest_runtest_protocol(item, nextitem):
 
 
 def pytest_sessionstart(session):
+    # TODO: Will need to revisit how this will look when mutliple items with different rerun schedules
+    #       exist
     session.dynamic_rerun_items = []
 
     # NOTE: start count at 1 instead of 0 since we are on the first run
     #       so, if we say we want 2 dynamic run attempts, that means we want 2 test runs
+    # TODO: Make this start at 0. It makes no sense to start it at 1
+    # TODO: Will need to revisit how this will look when mutliple items with different rerun schedules
+    #       exist
     session.num_dynamic_reruns_kicked_off = 1
 
 

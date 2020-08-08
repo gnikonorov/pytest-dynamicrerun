@@ -104,6 +104,18 @@ To set the ini key add the following to your config file's ``[pytest]`` section:
 
 Note thay any valid cron schedule is accepted. If this flag is not passed or set in the ini file, this plugin will not take effect.
 
+Developing against this plugin
+------------------------------
+This plugin exposes the following attributes on the ``item`` object:
+
+* ``dynamic_rerun_sleep_times (List)``: A list of `timedelta objects`_ representing the time slept in between reruns for the item
+
+This plugin exposes the following attributes on the ``session`` object:
+
+* ``dynamic_rerun_items (List)``: The list of items that are set to be dynamically rerun on the next iteration
+* ``num_dynamic_reruns_kicked_off (int)``: The amount of reruns launched at the moment of inspection
+
+
 Contributing
 ------------
 Contributions are always welcome. Tests can be run with `tox`_.
@@ -114,7 +126,6 @@ License
 -------
 
 Distributed under the terms of the `MIT`_ license, "pytest-dynamicrerun" is free and open source software
-
 
 Issues
 ------
@@ -127,4 +138,5 @@ If you encounter any problems, please `file an issue`_ along with a detailed des
 .. _`file an issue`: https://github.com/gnikonorov/pytest-dynamicrerun/issues
 .. _`pre-commit`: https://pre-commit.com/
 .. _`pytest`: https://github.com/pytest-dev/pytest
+.. _`timedelta objects`: https://docs.python.org/3/library/datetime.html#timedelta-objects
 .. _`tox`: https://tox.readthedocs.io/en/latest/
