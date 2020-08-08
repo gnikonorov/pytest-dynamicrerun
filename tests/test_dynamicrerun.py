@@ -84,6 +84,147 @@ def test_plugin_options_are_ini_configurable(
     _assert_result_outcomes(result, passed=1)
 
 
+def test_mark_takes_precendence_over_flags(testdir):
+    attempts = 5
+    failed_amount = 1
+    dynamic_rerun_amount = attempts - failed_amount
+
+    testdir.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts={}, triggers="foo", schedule="* * * * * *")
+        def test_assert_false():
+            print("foo")
+    """.format(
+            attempts
+        )
+    )
+
+    testdir.makeconftest(
+        """
+        def pytest_sessionfinish(session, exitstatus):
+            # A little hacky, but we know we can only ever have 1 item
+            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            assert len(sleep_times_for_item) == {}
+            for sleep_time in sleep_times_for_item:
+                assert sleep_time.days == 0
+                assert sleep_time.seconds == 1
+                assert sleep_time.microseconds
+    """.format(
+            dynamic_rerun_amount
+        )
+    )
+
+    result = testdir.runpytest(
+        "-v",
+        "--dynamic-rerun-attempts=2",
+        "--dynamic-rerun-schedule=* * * * *",
+        "--dynamic-rerun-triggers=blah",
+    )
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+
+    _assert_result_outcomes(
+        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+    )
+
+
+def test_mark_takes_precendence_over_ini_file(testdir):
+    attempts = 5
+    failed_amount = 1
+    dynamic_rerun_amount = attempts - failed_amount
+
+    testdir.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts={}, triggers="foo", schedule="* * * * * *")
+        def test_assert_false():
+            print("foo")
+    """.format(
+            attempts
+        )
+    )
+
+    testdir.makeconftest(
+        """
+        def pytest_sessionfinish(session, exitstatus):
+            # A little hacky, but we know we can only ever have 1 item
+            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            assert len(sleep_times_for_item) == {}
+            for sleep_time in sleep_times_for_item:
+                assert sleep_time.days == 0
+                assert sleep_time.seconds == 1
+                assert sleep_time.microseconds
+    """.format(
+            dynamic_rerun_amount
+        )
+    )
+
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_attempts = 2
+        dynamic_rerun_schedule = * * * * *
+        dynamic_rerun_triggers = blah
+    """
+    )
+
+    result = testdir.runpytest("-v")
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+
+    _assert_result_outcomes(
+        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+    )
+
+
+def test_flags_take_precendence_over_ini_file(testdir):
+    attempts = 5
+    failed_amount = 1
+    dynamic_rerun_amount = attempts - failed_amount
+
+    testdir.makepyfile("def test_assert_false(): print('foo')")
+
+    testdir.makeconftest(
+        """
+        def pytest_sessionfinish(session, exitstatus):
+            # A little hacky, but we know we can only ever have 1 item
+            sleep_times_for_item = session.dynamic_rerun_items[0].dynamic_rerun_sleep_times
+            assert len(sleep_times_for_item) == {}
+            for sleep_time in sleep_times_for_item:
+                assert sleep_time.days == 0
+                assert sleep_time.seconds == 1
+                assert sleep_time.microseconds
+    """.format(
+            dynamic_rerun_amount
+        )
+    )
+
+    testdir.makeini(
+        """
+        [pytest]
+        dynamic_rerun_attempts = 2
+        dynamic_rerun_schedule = * * * * *
+        dynamic_rerun_triggers = blah
+    """
+    )
+
+    result = testdir.runpytest(
+        "-v",
+        "--dynamic-rerun-attempts={}".format(attempts),
+        "--dynamic-rerun-schedule=* * * * * *",
+        "--dynamic-rerun-triggers=foo",
+    )
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+
+    _assert_result_outcomes(
+        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+    )
+
+
 @pytest.mark.parametrize(
     "ini_text,test_body,would_normally_pass",
     [

@@ -204,7 +204,6 @@ def pytest_addoption(parser):
     _add_dynamic_rerun_schedule_flag(parser)
 
 
-# TODO: Add tests for the new marker
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",

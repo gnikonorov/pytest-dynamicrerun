@@ -113,6 +113,8 @@ We can achieve the above functionality through markers as well. This plugin defi
     def test_print_foo():
         print("foo")
 
+Note that first we check for arguments in markers, then command line switches, and only then do we check in INI files.
+
 Developing against this plugin
 ------------------------------
 This plugin exposes the following attributes on the ``item`` object:
