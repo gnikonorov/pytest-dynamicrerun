@@ -124,7 +124,6 @@ def _get_dynamic_rerun_triggers_arg(item):
     return dynamic_rerun_triggers
 
 
-# TODO: figure out how to get warnings?
 def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
@@ -211,8 +210,6 @@ def pytest_runtest_protocol(item, nextitem):
             return True
 
         now_time = datetime.now()
-        # NOTE: in the readme note that croniter does second repeats
-        #       see https://github.com/kiorky/croniter#about-second-repeats
         time_iterator = croniter(dynamic_rerun_schedule_arg, now_time)
 
         time_delta = time_iterator.get_next(datetime) - now_time

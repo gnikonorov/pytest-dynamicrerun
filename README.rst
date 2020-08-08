@@ -91,6 +91,8 @@ Specifying a rerun interval
 
 You can specify an interval to rerun tests on by either passing the ``--dynamic-rerun-schedule`` flag to python when invoking ``pytest`` or including the ``dyanmic_rerun_schedule`` ini key.
 
+Internally, this plugin uses `croniter`_ to schedule wait times. Because of this, we are able to schedule wait times with second level granularity. Visit the croniter repository ``README`` to find out more information on this.
+
 To pass the flag::
 
     python3 -m pytest --dynamic-rerun-schedule= * * * * * *
@@ -120,8 +122,9 @@ Issues
 If you encounter any problems, please `file an issue`_ along with a detailed description.
 
 .. _`MIT`: http://opensource.org/licenses/MIT
+.. _`PyPI`: https://pypi.org/
+.. _`croniter`: https://github.com/kiorky/croniter/
 .. _`file an issue`: https://github.com/gnikonorov/pytest-dynamicrerun/issues
+.. _`pre-commit`: https://pre-commit.com/
 .. _`pytest`: https://github.com/pytest-dev/pytest
 .. _`tox`: https://tox.readthedocs.io/en/latest/
-.. _`PyPI`: https://pypi.org/
-.. _`pre-commit`: https://pre-commit.com/
