@@ -130,7 +130,9 @@ def _is_rerun_triggering_report(item, report):
         return report.failed
 
     for rerun_regex in dynamic_rerun_triggers:
-        if report.longrepr and re.search(
+        # NOTE: Checking for both report.longrepr and reprcrash on report.longrepr is intentional
+        report_has_reprcrash = report.longrepr and hasattr(report.longrepr, "reprcrash")
+        if report_has_reprcrash and re.search(
             rerun_regex, report.longrepr.reprcrash.message
         ):
             return True
@@ -162,10 +164,9 @@ def _rerun_dynamically_failing_items(
 
     rerun_items = session.dynamic_rerun_items
     for i, item in enumerate(rerun_items):
-        # TODO: Add tests for sleep times
-        if not hasattr(item, "sleep_times"):
-            item.sleep_times = []
-        item.sleep_times.append(time_delta.seconds)
+        if not hasattr(item, "dynamic_rerun_sleep_times"):
+            item.dynamic_rerun_sleep_times = []
+        item.dynamic_rerun_sleep_times.append(time_delta)
 
         next_item = rerun_items[i + 1] if i + 1 < len(rerun_items) else None
         pytest_runtest_protocol(item, next_item)
@@ -184,6 +185,7 @@ def pytest_report_teststatus(report):
         return "dynamicrerun", "DR", ("DYNAMIC_RERUN", {"yellow": True})
 
 
+# TODO: Document the properties we place on item that can be fetched
 def pytest_runtest_protocol(item, nextitem):
     # bail early if a falsey value was given for required args
     dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
@@ -225,8 +227,6 @@ def pytest_runtest_protocol(item, nextitem):
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
     if not should_queue_for_rerun:
-        if item in item.session.dynamic_rerun_items:
-            item.session.dynamic_rerun_items.remove(item)
         return True
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
