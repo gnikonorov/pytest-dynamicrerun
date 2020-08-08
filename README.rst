@@ -102,7 +102,7 @@ To set the ini key add the following to your config file's ``[pytest]`` section:
     [pytest]
     dynamic_rerun_schedule = * * * * * *
 
-Note thay any valid cron schedule is accepted. If this flag is not passed or set in the ini file, this plugin will not take effect.
+Note thay any valid cron schedule is accepted. If this flag is not passed or set in the ini file, this plugin will not take effect. Passing an invalid value will force the interval to default to ``* * * * * *`` ( every second ).
 
 Using markers to rerun tests
 ############################

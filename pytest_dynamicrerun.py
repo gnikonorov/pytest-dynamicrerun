@@ -15,6 +15,7 @@ from _pytest.runner import runtestprotocol
 from croniter import croniter
 
 DEFAULT_RERUN_ATTEMPTS = 1
+DEFAULT_RERUN_SCHEDULE = "* * * * * *"
 MARKER_NAME = "dynamicrerun"
 PLUGIN_NAME = "dynamicrerun"
 
@@ -80,11 +81,12 @@ def _get_dynamic_rerun_schedule_arg(item):
 
     if dynamic_rerun_arg is not None and not croniter.is_valid(dynamic_rerun_arg):
         warnings.warn(
-            "Can't parse invalid dynamic rerun schedule '{}'. Ignoring dynamic rerun schedule.".format(
-                dynamic_rerun_arg
+            "Can't parse invalid dynamic rerun schedule '{}'. "
+            "Ignoring dynamic rerun schedule and using default '{}'".format(
+                dynamic_rerun_arg, DEFAULT_RERUN_SCHEDULE
             )
         )
-        dynamic_rerun_arg = None
+        dynamic_rerun_arg = DEFAULT_RERUN_SCHEDULE
 
     return dynamic_rerun_arg
 
@@ -164,6 +166,7 @@ def _rerun_dynamically_failing_items(
     if session.num_dynamic_reruns_kicked_off > max_allowed_rerun_attempts:
         return True
 
+    # TODO: Add the maditory second slept to the sleep time attributes to properly reflect real sleep time
     # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
     #       multiple times in the same one
     #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
