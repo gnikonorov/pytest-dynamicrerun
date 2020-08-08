@@ -104,6 +104,15 @@ To set the ini key add the following to your config file's ``[pytest]`` section:
 
 Note thay any valid cron schedule is accepted. If this flag is not passed or set in the ini file, this plugin will not take effect.
 
+Using markers to rerun tests
+############################
+
+We can achieve the above functionality through markers as well. This plugin defines the ``dynamicrerun`` mark, which can be used as follows::
+
+    @pytest.mark.dynamicrerun(attempts=10, triggers="foo", schedule="* * * * * *")
+    def test_print_foo():
+        print("foo")
+
 Developing against this plugin
 ------------------------------
 This plugin exposes the following attributes on the ``item`` object:

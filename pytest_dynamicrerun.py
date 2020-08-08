@@ -15,6 +15,7 @@ from _pytest.runner import runtestprotocol
 from croniter import croniter
 
 DEFAULT_RERUN_ATTEMPTS = 1
+MARKER_NAME = "dynamicrerun"
 PLUGIN_NAME = "dynamicrerun"
 
 
@@ -46,10 +47,6 @@ def _add_dynamic_rerun_schedule_flag(parser):
     parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
 
 
-# TODO: Add tests for this flag and finish implementing it
-#       By default all failures should force a rerun
-#       If we pass in a value to this flag, any output emitted by pytest
-#       that matches the text should trigger a rerun and all other failures should be hard failures
 # TODO: As a follow up we can let each error define its own rerun amount here. But that should not be
 #       part of the initial pass
 def _add_dynamic_rerun_triggers_flag(parser):
@@ -69,15 +66,16 @@ def _add_dynamic_rerun_triggers_flag(parser):
     )
 
 
-# NOTE: See how we can refactor the _get methods into one method
-#       Or if we even need them, since they're not really doing anything
-#       Also need to check what happens to plugin if installed and nothing is passed
 def _get_dynamic_rerun_schedule_arg(item):
-    dynamic_rerun_arg = None
-    if item.session.config.option.dynamic_rerun_schedule:
+    marker = item.get_closest_marker(MARKER_NAME)
+    marker_param_name = "schedule"
+
+    # The priority followed is: marker, then command line switch, then config INI file
+    if marker and marker_param_name in marker.kwargs.keys():
+        dynamic_rerun_arg = marker.kwargs[marker_param_name]
+    elif item.session.config.option.dynamic_rerun_schedule:
         dynamic_rerun_arg = str(item.session.config.option.dynamic_rerun_schedule)
     else:
-        # fall back to ini config if no command line switch provided
         dynamic_rerun_arg = item.session.config.getini("dynamic_rerun_schedule")
 
     if dynamic_rerun_arg is not None and not croniter.is_valid(dynamic_rerun_arg):
@@ -92,11 +90,16 @@ def _get_dynamic_rerun_schedule_arg(item):
 
 
 def _get_dynamic_rerun_attempts_arg(item):
+    marker = item.get_closest_marker(MARKER_NAME)
+    marker_param_name = "attempts"
     warnings_text = "Rerun attempts must be a positive integer. Using default value {}".format(
         DEFAULT_RERUN_ATTEMPTS
     )
 
-    if item.session.config.option.dynamic_rerun_attempts:
+    # The priority followed is: marker, then command line switch, then config INI file
+    if marker and marker_param_name in marker.kwargs.keys():
+        rerun_attempts = marker.kwargs[marker_param_name]
+    elif item.session.config.option.dynamic_rerun_attempts:
         rerun_attempts = item.session.config.option.dynamic_rerun_attempts
     else:
         rerun_attempts = item.session.config.getini("dynamic_rerun_attempts")
@@ -115,18 +118,18 @@ def _get_dynamic_rerun_attempts_arg(item):
 
 
 def _get_dynamic_rerun_triggers_arg(item):
-    dynamic_rerun_triggers = None
-    if item.session.config.option.dynamic_rerun_triggers:
+    marker = item.get_closest_marker(MARKER_NAME)
+    marker_param_name = "triggers"
+
+    # The priority followed is: marker, then command line switch, then config INI file
+    if marker and marker_param_name in marker.kwargs.keys():
+        dynamic_rerun_triggers = marker.kwargs[marker_param_name]
+    elif item.session.config.option.dynamic_rerun_triggers:
         dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
     else:
         dynamic_rerun_triggers = item.session.config.getini("dynamic_rerun_triggers")
 
     return dynamic_rerun_triggers
-
-
-# TODO: Implement markers to override global configs
-def _get_closest_marker(item):
-    pass
 
 
 def _is_rerun_triggering_report(item, report):
@@ -164,6 +167,8 @@ def _rerun_dynamically_failing_items(
     now_time = datetime.now()
     time_iterator = croniter(dynamic_rerun_schedule, now_time)
 
+    # TODO: Consider always sleeping at least 1 second for tests that last less than 1 second and thus
+    #       will rerun themselves more times than expected
     time_delta = time_iterator.get_next(datetime) - now_time
     time.sleep(time_delta.seconds)
 
@@ -185,12 +190,21 @@ def pytest_addoption(parser):
     _add_dynamic_rerun_schedule_flag(parser)
 
 
+# TODO: Add tests for the new marker
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "{}(attempts=N, triggers=[REGEX], schedule=S): mark test as dynamically re-runnable. "
+        "Attempt a rerun up to N times on anything that matches a regex in the list [REGEX], "
+        "following cron formatted schedule S".format(MARKER_NAME),
+    )
+
+
 def pytest_report_teststatus(report):
     if report.outcome == "dynamically_rerun":
         return "dynamicrerun", "DR", ("DYNAMIC_RERUN", {"yellow": True})
 
 
-# TODO: Document the properties we place on item that can be fetched
 def pytest_runtest_protocol(item, nextitem):
     # bail early if a falsey value was given for required args
     dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
