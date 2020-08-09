@@ -119,6 +119,7 @@ Developing against this plugin
 ------------------------------
 This plugin exposes the following attributes on the ``item`` object:
 
+* ``dynamic_rerun_run_times ( list )``: The list of times this item was run by the plugin. Note this includes the original non dynamically rerun run.
 * ``dynamic_rerun_schedule(string)``: The schedule to rerun this item on. See the section ``Specifying a rerun interval`` above for more details.
 * ``dynamic_rerun_sleep_times (list)``: A list of `timedelta objects`_ representing the time slept in between reruns for the item
 * ``dynamic_rerun_triggers (list)``: The rerun triggers for this specific item. See the section ``Specifying what to rerun on`` above for more details.

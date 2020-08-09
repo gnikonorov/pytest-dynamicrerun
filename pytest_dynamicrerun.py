@@ -1,4 +1,4 @@
-# TODO: When different rerun schedules for items are supported, figure out how to batch runs.
+# TODO: Test batching is implemented. Need to add tests for it
 #       After this is done, publush to PyPI
 # NOTE: Warning support is broken ATM and may be broken until some pytest patches are made upstream
 #       For now, this does NOT support warnings but here are 2 possible solutions:
@@ -12,7 +12,6 @@ import re
 import time
 import warnings
 from datetime import datetime
-from datetime import timedelta
 
 from _pytest.runner import runtestprotocol
 from croniter import croniter
@@ -68,6 +67,18 @@ def _add_dynamic_rerun_triggers_flag(parser):
         "default value for --dyamic-rerun-triggers",
         type="linelist",
     )
+
+
+def _can_item_be_potentially_dynamically_rerun(item):
+    # this is a previously failing test that now passes
+    if hasattr(item, "_dynamic_rerun_terminated") and item._dynamic_rerun_terminated:
+        return False
+
+    # this item has been run as many times as allowed
+    if item.num_dynamic_reruns_kicked_off >= item.max_allowed_dynamic_rerun_attempts:
+        return False
+
+    return True
 
 
 def _get_dynamic_rerun_schedule_arg(item):
@@ -139,6 +150,48 @@ def _get_dynamic_rerun_triggers_arg(item):
     return dynamic_rerun_triggers
 
 
+def _get_next_rerunnable_time(items_to_rerun, current_time):
+    soonest_possible_run_time = None
+
+    for item in items_to_rerun:
+        if not _can_item_be_potentially_dynamically_rerun(item):
+            continue
+
+        time_iterator = croniter(item.dynamic_rerun_schedule, current_time)
+        next_run_time = time_iterator.get_next(datetime)
+
+        if soonest_possible_run_time is None:
+            soonest_possible_run_time = next_run_time
+        elif soonest_possible_run_time > next_run_time:
+            soonest_possible_run_time = next_run_time
+
+    return soonest_possible_run_time
+
+
+def _get_immediately_rerunnable_items(items_to_rerun, current_time, last_run_time):
+    rerunnable_items = []
+    for item in items_to_rerun:
+        if not _can_item_be_potentially_dynamically_rerun(item):
+            continue
+
+        time_iterator = croniter(item.dynamic_rerun_schedule, last_run_time)
+        if time_iterator.get_next(datetime) <= current_time:
+            rerunnable_items.append(item)
+
+    return rerunnable_items
+
+
+def _get_all_rerunnable_items(items_to_rerun):
+    rerunnable_items = []
+    for item in items_to_rerun:
+        if not _can_item_be_potentially_dynamically_rerun(item):
+            continue
+
+        rerunnable_items.append(item)
+
+    return rerunnable_items
+
+
 def _is_rerun_triggering_report(item, report):
     dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     if not dynamic_rerun_triggers:
@@ -172,40 +225,41 @@ def _rerun_dynamically_failing_items(session):
     #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
     #       seconds to run, we could end up rerunning the test in the same second it failed without
     #       this required sleep. The same idea applies to other cron formats
-    rerun_items = session.dynamic_rerun_items
-    for i, item in enumerate(rerun_items):
-        # If this is a previously failing test that now passes, don't run it
-        if (
-            hasattr(item, "_dynamic_rerun_terminated")
-            and item._dynamic_rerun_terminated
-        ):
-            continue
+    manditory_sleep_time = 1
+    time.sleep(manditory_sleep_time)
 
-        item.num_dynamic_reruns_kicked_off += 1
-        if item.num_dynamic_reruns_kicked_off > item.max_allowed_dynamic_rerun_attempts:
-            continue
+    last_rerun_attempt_time = None
+    while _get_all_rerunnable_items(session.dynamic_rerun_items):
+        current_time = datetime.now()
+        if last_rerun_attempt_time is None:
+            last_rerun_attempt_time = current_time
 
-        if not hasattr(item, "dynamic_rerun_sleep_times"):
-            item.dynamic_rerun_sleep_times = []
-
-        # TODO: This is WRONG. We should only be sleeping the mandatory sleep time once before we begin this loop
-        #       I'm leaving it here as a temporary thing while I migrate num_dynamic_rerun_attempts to the item object
-        manditory_sleep_time = 1
-        time.sleep(manditory_sleep_time)
-
-        post_sleep_time = datetime.now()
-        time_iterator = croniter(item.dynamic_rerun_schedule, post_sleep_time)
-
-        next_allowed_run_time = time_iterator.get_next(datetime) - post_sleep_time
-        time.sleep(next_allowed_run_time.total_seconds())
-
-        real_sleep_time = (
-            timedelta(seconds=manditory_sleep_time) + next_allowed_run_time
+        rerun_items = _get_immediately_rerunnable_items(
+            session.dynamic_rerun_items, current_time, last_rerun_attempt_time
         )
-        item.dynamic_rerun_sleep_times.append(real_sleep_time)
+        for i, item in enumerate(rerun_items):
+            last_rerun_attempt_time = current_time
 
-        next_item = rerun_items[i + 1] if i + 1 < len(rerun_items) else None
-        pytest_runtest_protocol(item, next_item)
+            item.num_dynamic_reruns_kicked_off += 1
+
+            if not hasattr(item, "dynamic_rerun_sleep_times"):
+                item.dynamic_rerun_sleep_times = []
+
+            last_run_time = item.dynamic_rerun_run_times[-1]
+            sleep_time = current_time - last_run_time
+            item.dynamic_rerun_sleep_times.append(sleep_time)
+
+            next_item = rerun_items[i + 1] if i + 1 < len(rerun_items) else None
+            pytest_runtest_protocol(item, next_item)
+        else:
+            next_run_time = _get_next_rerunnable_time(
+                session.dynamic_rerun_items, last_rerun_attempt_time
+            )
+            if next_run_time is not None:
+                sleep_delta = next_run_time - current_time
+                total_sleep_time = sleep_delta.total_seconds()
+                if total_sleep_time > 0:
+                    time.sleep(sleep_delta.total_seconds())
 
     return True
 
@@ -249,6 +303,10 @@ def pytest_runtest_protocol(item, nextitem):
 
         if not hasattr(item, "num_dynamic_reruns_kicked_off"):
             item.num_dynamic_reruns_kicked_off = 0
+
+        if not hasattr(item, "dynamic_rerun_run_times"):
+            item.dynamic_rerun_run_times = []
+        item.dynamic_rerun_run_times.append(datetime.now())
 
         item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
         reports = runtestprotocol(item, nextitem=nextitem, log=False)
