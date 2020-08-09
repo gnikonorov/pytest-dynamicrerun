@@ -1,5 +1,6 @@
-# TODO: Test batching is implemented. Need to add tests for it
-#       After this is done, publush to PyPI
+# TODO: Publish to PyPI
+# TODO: Dont count dynamic_rerun resulting runs to the pytest progress report
+# TODO: Allow option to dynamically rerun on certain marks
 # NOTE: Warning support is broken ATM and may be broken until some pytest patches are made upstream
 #       For now, this does NOT support warnings but here are 2 possible solutions:
 #           We could use a combination of a global variable and `pytest_warning_captured`. This has issues
@@ -343,8 +344,6 @@ def pytest_runtest_protocol(item, nextitem):
 
 
 def pytest_sessionstart(session):
-    # TODO: Will need to revisit how this will look when mutliple items with different rerun schedules
-    #       exist
     session.dynamic_rerun_items = []
 
 

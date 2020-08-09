@@ -1,3 +1,6 @@
+import time
+from datetime import datetime
+
 import pytest
 from helpers import _assert_result_outcomes
 
@@ -415,3 +418,81 @@ def test_triggering_passing_and_failing_tests_properly_run_in_same_collection(
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     _assert_result_outcomes(result, dynamic_rerun=3, failed=2, passed=1)
+
+
+def test_dynamic_reruns_batched_by_rerun_time(testdir):
+    testdir.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_dynamically_rerun_every_second_a():
+            print("foo")
+
+        @pytest.mark.dynamicrerun(attempts=4, triggers="foo", schedule="* * * * * *")
+        def test_dynamically_rerun_every_second_b():
+            print("foo")
+
+        @pytest.mark.dynamicrerun(attempts=11, triggers="foo", schedule="* * * * * *")
+        def test_dynamically_rerun_every_second_c():
+            print("foo")
+
+        @pytest.mark.dynamicrerun(attempts=2, triggers="foo", schedule="* * * * * */5")
+        def test_dynamically_rerun_every_five_seconds_a():
+            print("foo")
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * */5")
+        def test_dynamically_rerun_every_five_seconds_b():
+            print("foo")
+        """
+    )
+
+    expected_stdout = [
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_a DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_a DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_a DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_a DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_a FAILED*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_b FAILED*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_a DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_a FAILED*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_b DYNAMIC_RERUN*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_second_c FAILED*",
+        "*test_dynamic_reruns_batched_by_rerun_time.py::test_dynamically_rerun_every_five_seconds_b FAILED*",
+    ]
+
+    # wait until seconds are at a *0 value for consistency ( 00, 10, 20, 30, ..., etc )
+    # this isn't exactly perfect since microseconds will be non zero, but it's close enough
+    current_time = datetime.now()
+
+    sleep_time_microseconds = 1 - (current_time.microsecond / 1000000)
+    sleep_time_seconds = 10 - (current_time.second % 10)
+    if sleep_time_microseconds != 0:
+        sleep_time_seconds -= 1
+
+    sleep_time = sleep_time_seconds + sleep_time_microseconds
+    time.sleep(sleep_time)
+
+    result = testdir.runpytest("-v")
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    result.stdout.fnmatch_lines(expected_stdout)
+
+    _assert_result_outcomes(result, dynamic_rerun=23, failed=5)
