@@ -6,20 +6,11 @@ pytest-dynamicrerun
     :target: https://pypi.org/project/pytest-dynamicrerun
     :alt: PyPI version
 
-.. image:: https://img.shields.io/pypi/pyversions/pytest-dynamicrerun.svg
-    :target: https://pypi.org/project/pytest-dynamicrerun
-    :alt: Python versions
-
 .. image:: https://travis-ci.org/gnikonorov/pytest-dynamicrerun.svg?branch=master
     :target: https://travis-ci.org/gnikonorov/pytest-dynamicrerun
     :alt: See Build Status on Travis CI
 
 pytest-dynamicrerun is a `pytest`_ plugin to rerun tests dynamically based off of test outcome and output.
-
-ATTENTION!!
------------
-
-This plugin is currently under active development. You are encouraged to use it, but all functionality may not work as expected and behavior may change at any time without warning. I have tried to keep documentation as accurate as possible but make no guarantees. This plugin should not be considered stable until the first version is published to  `PyPI`_.
 
 Supported versions
 ------------------
@@ -44,11 +35,9 @@ This plugin is tested against the following Python and pytest versions. Each Pyt
 Installation
 ------------
 
-This plugin is not yet published to `PyPI`_. You can install it locally by cloning this repo and running::
+Install this plugin via `PyPI`_ by running the following::
 
-    $ pip install -e <PATH_TO_DIR>
-
-Note that in the above example, ``<PATH_TO_DIR>`` is the path to the source of ``pytest-dynamicrerun``.
+    $ pip install pytest-dynamicrerun
 
 
 Usage
