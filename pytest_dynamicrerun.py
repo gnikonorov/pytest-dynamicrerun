@@ -220,14 +220,6 @@ def _is_rerun_triggering_report(item, report):
 
 
 def _rerun_dynamically_failing_items(session):
-    # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
-    #       multiple times in the same one
-    #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
-    #       seconds to run, we could end up rerunning the test in the same second it failed without
-    #       this required sleep. The same idea applies to other cron formats
-    manditory_sleep_time = 1
-    time.sleep(manditory_sleep_time)
-
     last_rerun_attempt_time = None
     while _get_all_rerunnable_items(session.dynamic_rerun_items):
         current_time = datetime.now()
@@ -259,7 +251,7 @@ def _rerun_dynamically_failing_items(session):
                 sleep_delta = next_run_time - current_time
                 total_sleep_time = sleep_delta.total_seconds()
                 if total_sleep_time > 0:
-                    time.sleep(sleep_delta.total_seconds())
+                    time.sleep(total_sleep_time)
 
     return True
 

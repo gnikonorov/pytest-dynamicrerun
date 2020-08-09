@@ -112,7 +112,7 @@ def test_mark_takes_precedence_over_flags(testdir):
             assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
-                assert sleep_time.seconds == 1
+                assert sleep_time.seconds >= 0
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
@@ -168,7 +168,7 @@ def test_mark_takes_precedence_over_ini_file(testdir):
             assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
-                assert sleep_time.seconds == 1
+                assert sleep_time.seconds >= 0
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
@@ -218,7 +218,7 @@ def test_flags_take_precedence_over_ini_file(testdir):
             assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
-                assert sleep_time.seconds == 1
+                assert sleep_time.seconds >= 0
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
