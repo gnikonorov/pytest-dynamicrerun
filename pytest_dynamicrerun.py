@@ -169,28 +169,38 @@ def _is_rerun_triggering_report(item, report):
 def _rerun_dynamically_failing_items(
     session, max_allowed_dynamic_rerun_attempts, dynamic_rerun_schedule
 ):
-    session.num_dynamic_reruns_kicked_off += 1
-    if session.num_dynamic_reruns_kicked_off > max_allowed_dynamic_rerun_attempts:
-        return True
-
     # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
     #       multiple times in the same one
     #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
     #       seconds to run, we could end up rerunning the test in the same second it failed without
     #       this required sleep. The same idea applies to other cron formats
-    manditory_sleep_time = 1
-    time.sleep(manditory_sleep_time)
-
-    post_sleep_time = datetime.now()
-    time_iterator = croniter(dynamic_rerun_schedule, post_sleep_time)
-
-    next_allowed_run_time = time_iterator.get_next(datetime) - post_sleep_time
-    time.sleep(next_allowed_run_time.total_seconds())
-
     rerun_items = session.dynamic_rerun_items
     for i, item in enumerate(rerun_items):
+        # If this is a previously failing test that now passes, don't run it
+        if (
+            hasattr(item, "_dynamic_rerun_terminated")
+            and item._dynamic_rerun_terminated
+        ):
+            continue
+
+        item.num_dynamic_reruns_kicked_off += 1
+        if item.num_dynamic_reruns_kicked_off > item.max_allowed_dynamic_rerun_attempts:
+            continue
+
         if not hasattr(item, "dynamic_rerun_sleep_times"):
             item.dynamic_rerun_sleep_times = []
+
+        # TODO: This is WRONG. We should only be sleeping the mandatory sleep time once before we begin this loop
+        #       I'm leaving it here as a temporary thing while I migrate num_dynamic_rerun_attempts to the item object
+        manditory_sleep_time = 1
+        time.sleep(manditory_sleep_time)
+
+        post_sleep_time = datetime.now()
+        time_iterator = croniter(dynamic_rerun_schedule, post_sleep_time)
+
+        next_allowed_run_time = time_iterator.get_next(datetime) - post_sleep_time
+        time.sleep(next_allowed_run_time.total_seconds())
+
         real_sleep_time = (
             timedelta(seconds=manditory_sleep_time) + next_allowed_run_time
         )
@@ -232,24 +242,28 @@ def pytest_runtest_protocol(item, nextitem):
     if max_allowed_dynamic_rerun_attempts is None:
         return
 
+    # TODO: We should refactor the setting of public fields on an item to a method
     item.dynamic_rerun_schedule = dynamic_rerun_schedule
     item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
+
+    # TODO: num_dynamic_reruns_kicked_off needs to be changed to 0
+    #       having it at 1 doesn't make sense
+    if not hasattr(item, "num_dynamic_reruns_kicked_off"):
+        item.num_dynamic_reruns_kicked_off = 1
 
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)
 
     will_run_again = (
-        item.session.num_dynamic_reruns_kicked_off
-        < item.max_allowed_dynamic_rerun_attempts
+        item.num_dynamic_reruns_kicked_off < item.max_allowed_dynamic_rerun_attempts
     )
 
-    should_queue_for_rerun = False
     for report in reports:
         rerun_triggering = _is_rerun_triggering_report(item, report)
         if rerun_triggering:
-            if will_run_again:
-                should_queue_for_rerun = True
+            item._dynamic_rerun_terminated = False
 
+            if will_run_again:
                 report.outcome = "dynamically_rerun"
                 if item not in item.session.dynamic_rerun_items:
                     item.session.dynamic_rerun_items.append(item)
@@ -262,12 +276,11 @@ def pytest_runtest_protocol(item, nextitem):
                 # 'call' was picked over setup or teardown since it makes the most sense
                 # to mark the actual execution as bad in passing test cases
                 report.outcome = "failed"
+        else:
+            item._dynamic_rerun_terminated = True
 
         item.ihook.pytest_runtest_logreport(report=report)
     item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
-
-    if not should_queue_for_rerun:
-        return True
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:
@@ -284,13 +297,6 @@ def pytest_sessionstart(session):
     # TODO: Will need to revisit how this will look when mutliple items with different rerun schedules
     #       exist
     session.dynamic_rerun_items = []
-
-    # NOTE: start count at 1 instead of 0 since we are on the first run
-    #       so, if we say we want 2 dynamic run attempts, that means we want 2 test runs
-    # TODO: Make this start at 0. It makes no sense to start it at 1
-    # TODO: Will need to revisit how this will look when mutliple items with different rerun schedules
-    #       exist
-    session.num_dynamic_reruns_kicked_off = 1
 
 
 def pytest_terminal_summary(terminalreporter):
