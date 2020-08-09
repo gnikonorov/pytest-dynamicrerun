@@ -82,7 +82,7 @@ def _get_dynamic_rerun_schedule_arg(item):
     else:
         dynamic_rerun_arg = item.session.config.getini("dynamic_rerun_schedule")
 
-    if dynamic_rerun_arg is not None and not croniter.is_valid(dynamic_rerun_arg):
+    if dynamic_rerun_arg and not croniter.is_valid(dynamic_rerun_arg):
         warnings.warn(
             "Can't parse invalid dynamic rerun schedule '{}'. "
             "Ignoring dynamic rerun schedule and using default '{}'".format(
@@ -166,9 +166,7 @@ def _is_rerun_triggering_report(item, report):
     return False
 
 
-def _rerun_dynamically_failing_items(
-    session, max_allowed_dynamic_rerun_attempts, dynamic_rerun_schedule
-):
+def _rerun_dynamically_failing_items(session):
     # NOTE: We always sleep one second to ensure that we wait for the next interval instead of running
     #       multiple times in the same one
     #       For example, if the cron schedule is every second ( * * * * * * ) and the test takes .1
@@ -196,7 +194,7 @@ def _rerun_dynamically_failing_items(
         time.sleep(manditory_sleep_time)
 
         post_sleep_time = datetime.now()
-        time_iterator = croniter(dynamic_rerun_schedule, post_sleep_time)
+        time_iterator = croniter(item.dynamic_rerun_schedule, post_sleep_time)
 
         next_allowed_run_time = time_iterator.get_next(datetime) - post_sleep_time
         time.sleep(next_allowed_run_time.total_seconds())
@@ -233,62 +231,65 @@ def pytest_report_teststatus(report):
 
 
 def pytest_runtest_protocol(item, nextitem):
-    # bail early if a falsey value was given for required args
+    # don't apply the plugin if required arguments are missing
+    should_run_plugin = True
+
     dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
-    if dynamic_rerun_schedule is None:
-        return
+    if not dynamic_rerun_schedule:
+        should_run_plugin = False
 
     max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
     if max_allowed_dynamic_rerun_attempts is None:
-        return
+        should_run_plugin = False
 
-    # TODO: We should refactor the setting of public fields on an item to a method
-    item.dynamic_rerun_schedule = dynamic_rerun_schedule
-    item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
+    if should_run_plugin:
+        # TODO: We should refactor the setting of public fields on an item to a method
+        item.dynamic_rerun_schedule = dynamic_rerun_schedule
+        item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
 
-    if not hasattr(item, "num_dynamic_reruns_kicked_off"):
-        item.num_dynamic_reruns_kicked_off = 0
+        if not hasattr(item, "num_dynamic_reruns_kicked_off"):
+            item.num_dynamic_reruns_kicked_off = 0
 
-    item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
-    reports = runtestprotocol(item, nextitem=nextitem, log=False)
+        item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
+        reports = runtestprotocol(item, nextitem=nextitem, log=False)
 
-    will_run_again = (
-        item.num_dynamic_reruns_kicked_off < item.max_allowed_dynamic_rerun_attempts
-    )
+        will_run_again = (
+            item.num_dynamic_reruns_kicked_off < item.max_allowed_dynamic_rerun_attempts
+        )
 
-    for report in reports:
-        rerun_triggering = _is_rerun_triggering_report(item, report)
-        if rerun_triggering:
-            item._dynamic_rerun_terminated = False
+        for report in reports:
+            rerun_triggering = _is_rerun_triggering_report(item, report)
+            if rerun_triggering:
+                item._dynamic_rerun_terminated = False
 
-            if will_run_again:
-                report.outcome = "dynamically_rerun"
-                if item not in item.session.dynamic_rerun_items:
-                    item.session.dynamic_rerun_items.append(item)
+                if will_run_again:
+                    report.outcome = "dynamically_rerun"
+                    if item not in item.session.dynamic_rerun_items:
+                        item.session.dynamic_rerun_items.append(item)
 
-                if not report.failed:
-                    item.ihook.pytest_runtest_logreport(report=report)
-                    break
-            elif report.when == "call" and not report.failed:
-                # only mark 'call' as failed to avoid over-reporting errors
-                # 'call' was picked over setup or teardown since it makes the most sense
-                # to mark the actual execution as bad in passing test cases
-                report.outcome = "failed"
-        else:
-            item._dynamic_rerun_terminated = True
+                    if not report.failed:
+                        item.ihook.pytest_runtest_logreport(report=report)
+                        break
+                elif report.when == "call" and not report.failed:
+                    # only mark 'call' as failed to avoid over-reporting errors
+                    # 'call' was picked over setup or teardown since it makes the most sense
+                    # to mark the actual execution as bad in passing test cases
+                    report.outcome = "failed"
+            else:
+                item._dynamic_rerun_terminated = True
 
-        item.ihook.pytest_runtest_logreport(report=report)
-    item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
+            item.ihook.pytest_runtest_logreport(report=report)
+        item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
     # if nextitem is None, we have finished running tests. Dynamically rerun any tests that failed
     if nextitem is None:
-        return _rerun_dynamically_failing_items(
-            item.session,
-            item.max_allowed_dynamic_rerun_attempts,
-            item.dynamic_rerun_schedule,
-        )
+        _rerun_dynamically_failing_items(item.session)
 
-    return True
+    # NOTE: This was done this way to conform to the pytest runtest api and there is no logic beyond that
+    if should_run_plugin:
+        return True
+    else:
+        return
 
 
 def pytest_sessionstart(session):

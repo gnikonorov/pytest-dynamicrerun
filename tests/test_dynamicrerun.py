@@ -321,3 +321,97 @@ def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass
     _assert_result_outcomes(
         result, dynamic_rerun=dynamic_rerun_attempts, failed=failed_amount,
     )
+
+
+@pytest.mark.parametrize(
+    "test_body",
+    [
+        """
+        import pytest
+
+        def test_will_pass():
+            assert True
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+
+        def test_will_fail():
+            assert False
+        """,
+        """
+        import pytest
+
+        def test_will_pass():
+            assert True
+
+        def test_will_fail():
+            assert False
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+        """,
+        """
+        import pytest
+
+        def test_will_fail():
+            assert False
+
+        def test_will_pass():
+            assert True
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+        """,
+        """
+        import pytest
+
+        def test_will_fail():
+            assert False
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+
+        def test_will_pass():
+            assert True
+        """,
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+
+        def test_will_fail():
+            assert False
+
+        def test_will_pass():
+            assert True
+        """,
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts=3, triggers="foo", schedule="* * * * * *")
+        def test_will_dynamically_rerun():
+            print("foo")
+
+        def test_will_pass():
+            assert True
+
+        def test_will_fail():
+            assert False
+        """,
+    ],
+)
+def test_triggering_passing_and_failing_tests_properly_run_in_same_collection(
+    testdir, test_body
+):
+    testdir.makepyfile(test_body)
+
+    result = testdir.runpytest("-v")
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+
+    _assert_result_outcomes(result, dynamic_rerun=3, failed=2, passed=1)
