@@ -9,7 +9,6 @@ from helpers import _assert_result_outcomes
 def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
     rerun_amount = 2
     failed_amount = 1
-    dynamic_rerun_amount = rerun_amount - failed_amount
     passed_amount = 0
 
     testdir.makeini(
@@ -33,7 +32,7 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
     """.format(
-            dynamic_rerun_amount
+            rerun_amount
         )
     )
 
@@ -50,10 +49,7 @@ def test_invalid_dynamic_rerun_schedule_ignored(testdir, rerun_schedule):
     )
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     _assert_result_outcomes(
-        result,
-        dynamic_rerun=dynamic_rerun_amount,
-        failed=failed_amount,
-        passed=passed_amount,
+        result, dynamic_rerun=rerun_amount, failed=failed_amount, passed=passed_amount,
     )
 
 
@@ -71,7 +67,7 @@ def test_dynamic_rerun_properly_adheres_to_schedule(
 ):
     if should_rerun:
         failed_amount = 1
-        dynamic_rerun_amount = rerun_amount - failed_amount
+        dynamic_rerun_amount = rerun_amount
         passed_amount = 0
     else:
         failed_amount = 0

@@ -32,9 +32,7 @@ def test_plugin_flags_are_recognized(testdir):
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     _assert_result_outcomes(
-        result,
-        dynamic_rerun=dynamic_rerun_attempts - failed_amount,
-        failed=failed_amount,
+        result, dynamic_rerun=dynamic_rerun_attempts, failed=failed_amount,
     )
 
 
@@ -87,7 +85,6 @@ def test_plugin_options_are_ini_configurable(
 def test_mark_takes_precedence_over_flags(testdir):
     attempts = 5
     failed_amount = 1
-    dynamic_rerun_amount = attempts - failed_amount
 
     rerun_triggers = "foo"
     rerun_schedule = "* * * * * *"
@@ -112,18 +109,18 @@ def test_mark_takes_precedence_over_flags(testdir):
 
             # first, check the sleep times
             sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
-            assert len(sleep_times_for_item) == {}
+            assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
-            assert rerun_item.dynamic_rerun_triggers == ["{}"]
-            assert rerun_item.dynamic_rerun_schedule == "{}"
-            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
+            assert rerun_item.dynamic_rerun_triggers == ["{1}"]
+            assert rerun_item.dynamic_rerun_schedule == "{2}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {0}
     """.format(
-            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
+            attempts, rerun_triggers, rerun_schedule
         )
     )
 
@@ -137,14 +134,13 @@ def test_mark_takes_precedence_over_flags(testdir):
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+        result, dynamic_rerun=attempts, failed=failed_amount,
     )
 
 
 def test_mark_takes_precedence_over_ini_file(testdir):
     attempts = 5
     failed_amount = 1
-    dynamic_rerun_amount = attempts - failed_amount
 
     rerun_triggers = "foo"
     rerun_schedule = "* * * * * *"
@@ -169,18 +165,18 @@ def test_mark_takes_precedence_over_ini_file(testdir):
 
             # first, check the sleep times
             sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
-            assert len(sleep_times_for_item) == {}
+            assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
-            assert rerun_item.dynamic_rerun_triggers == ["{}"]
-            assert rerun_item.dynamic_rerun_schedule == "{}"
-            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
+            assert rerun_item.dynamic_rerun_triggers == ["{1}"]
+            assert rerun_item.dynamic_rerun_schedule == "{2}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {0}
     """.format(
-            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
+            attempts, rerun_triggers, rerun_schedule
         )
     )
 
@@ -198,14 +194,13 @@ def test_mark_takes_precedence_over_ini_file(testdir):
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+        result, dynamic_rerun=attempts, failed=failed_amount,
     )
 
 
 def test_flags_take_precedence_over_ini_file(testdir):
     attempts = 5
     failed_amount = 1
-    dynamic_rerun_amount = attempts - failed_amount
 
     rerun_triggers = "foo"
     rerun_schedule = "* * * * * *"
@@ -220,18 +215,18 @@ def test_flags_take_precedence_over_ini_file(testdir):
 
             # first, check the sleep times
             sleep_times_for_item = rerun_item.dynamic_rerun_sleep_times
-            assert len(sleep_times_for_item) == {}
+            assert len(sleep_times_for_item) == {0}
             for sleep_time in sleep_times_for_item:
                 assert sleep_time.days == 0
                 assert sleep_time.seconds == 1
                 assert sleep_time.microseconds
 
             # Then, the triggers, schedule, and rerun attempts
-            assert rerun_item.dynamic_rerun_triggers == ["{}"]
-            assert rerun_item.dynamic_rerun_schedule == "{}"
-            assert rerun_item.max_allowed_dynamic_rerun_attempts == {}
+            assert rerun_item.dynamic_rerun_triggers == ["{1}"]
+            assert rerun_item.dynamic_rerun_schedule == "{2}"
+            assert rerun_item.max_allowed_dynamic_rerun_attempts == {0}
     """.format(
-            dynamic_rerun_amount, rerun_triggers, rerun_schedule, attempts
+            attempts, rerun_triggers, rerun_schedule
         )
     )
 
@@ -254,7 +249,7 @@ def test_flags_take_precedence_over_ini_file(testdir):
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount,
+        result, dynamic_rerun=attempts, failed=failed_amount,
     )
 
 
@@ -283,7 +278,6 @@ def test_flags_take_precedence_over_ini_file(testdir):
 def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass):
     dynamic_rerun_attempts = 3
     failed_amount = 1
-    dynamic_rerun_amount = dynamic_rerun_attempts - failed_amount
 
     testdir.makeini(ini_text.format(dynamic_rerun_attempts))
 
@@ -293,7 +287,7 @@ def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass
 
     expected_output = []
     expected_output.append("=* test session starts *=")
-    for rerun_attempt in range(dynamic_rerun_amount):
+    for rerun_attempt in range(dynamic_rerun_attempts):
         expected_output.append(
             "*{}::{} DYNAMIC_RERUN*".format(test_file_name, test_name)
         )
@@ -303,7 +297,7 @@ def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass
     expected_output.append("_* {} *_".format(test_name))
 
     expected_output.append("=* Dynamically rerun tests *=")
-    for rerun_attempt in range(dynamic_rerun_amount):
+    for rerun_attempt in range(dynamic_rerun_attempts):
         expected_output.append("*{}::{}".format(test_file_name, test_name))
 
     expected_output.append("=* short test summary info *=")
@@ -316,7 +310,7 @@ def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass
 
     expected_output.append(
         "=*{} failed, {} dynamicrerun in *s *=".format(
-            failed_amount, dynamic_rerun_amount
+            failed_amount, dynamic_rerun_attempts
         )
     )
 
@@ -325,7 +319,5 @@ def test_output_properly_shown(testdir, ini_text, test_body, would_normally_pass
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     _assert_result_outcomes(
-        result,
-        dynamic_rerun=dynamic_rerun_attempts - failed_amount,
-        failed=failed_amount,
+        result, dynamic_rerun=dynamic_rerun_attempts, failed=failed_amount,
     )

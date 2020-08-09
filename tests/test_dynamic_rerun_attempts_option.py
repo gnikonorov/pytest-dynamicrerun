@@ -21,7 +21,7 @@ def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
         ["*Rerun attempts must be a positive integer. Using default value 1*"]
     )
     assert result.ret == pytest.ExitCode.TESTS_FAILED
-    _assert_result_outcomes(result, failed=1)
+    _assert_result_outcomes(result, dynamic_rerun=1, failed=1)
 
 
 @pytest.mark.parametrize("rerun_amount", [1, 2, 3])
@@ -41,10 +41,7 @@ def test_positive_integer_dynamic_rerun_attempts_accepted(testdir, rerun_amount)
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     failed_amount = 1
-    dynamic_rerun_amount = rerun_amount - failed_amount
-    _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount
-    )
+    _assert_result_outcomes(result, dynamic_rerun=rerun_amount, failed=failed_amount)
 
 
 @pytest.mark.parametrize(
@@ -94,7 +91,7 @@ def test_success_stops_dynamic_rerun_attempts(testdir, pytest_file, expected_rer
     _assert_result_outcomes(result, dynamic_rerun=expected_reruns, passed=1)
 
 
-def test_no_dynamic_rerun_attempts_by_default(testdir):
+def test_one_dynamic_rerun_attempt_by_default(testdir):
     testdir.makeini(
         """
         [pytest]
@@ -105,4 +102,4 @@ def test_no_dynamic_rerun_attempts_by_default(testdir):
     testdir.makepyfile("def test_always_false(): assert False")
     result = testdir.runpytest("-v")
     assert result.ret == pytest.ExitCode.TESTS_FAILED
-    _assert_result_outcomes(result, failed=1)
+    _assert_result_outcomes(result, dynamic_rerun=1, failed=1)

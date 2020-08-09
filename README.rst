@@ -57,7 +57,7 @@ Usage
 Specifying how many times to rerun
 ##################################
 
-By default, one rerun attempt is made ( subject to change in the future ). You can set the amount of times to attempt a rerun by  passing the ``--dynamic-rerun-attempts`` flag when invoking pytest or including the ``dynamic_rerun_attempts`` ini key.
+By default, one rerun attempt is made. You can set the amount of times to attempt a rerun by  passing the ``--dynamic-rerun-attempts`` flag when invoking pytest or including the ``dynamic_rerun_attempts`` ini key.
 
 To pass the flag::
 

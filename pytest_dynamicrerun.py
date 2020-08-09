@@ -246,10 +246,8 @@ def pytest_runtest_protocol(item, nextitem):
     item.dynamic_rerun_schedule = dynamic_rerun_schedule
     item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
 
-    # TODO: num_dynamic_reruns_kicked_off needs to be changed to 0
-    #       having it at 1 doesn't make sense
     if not hasattr(item, "num_dynamic_reruns_kicked_off"):
-        item.num_dynamic_reruns_kicked_off = 1
+        item.num_dynamic_reruns_kicked_off = 0
 
     item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     reports = runtestprotocol(item, nextitem=nextitem, log=False)

@@ -44,10 +44,7 @@ def test_exceptions_output_checked_by_dynamic_rerun_triggers(
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     failed_amount = 1
-    dynamic_rerun_amount = rerun_amount - failed_amount
-    _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount
-    )
+    _assert_result_outcomes(result, dynamic_rerun=rerun_amount, failed=failed_amount)
 
 
 @pytest.mark.parametrize(
@@ -71,10 +68,7 @@ def test_stdout_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     failed_amount = 1
-    dynamic_rerun_amount = rerun_amount - failed_amount
-    _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount
-    )
+    _assert_result_outcomes(result, dynamic_rerun=rerun_amount, failed=failed_amount)
 
 
 @pytest.mark.parametrize(
@@ -105,10 +99,7 @@ def test_stderr_checked_by_dynamic_rerun_triggers(testdir, rerun_trigger_text):
     assert result.ret == pytest.ExitCode.TESTS_FAILED
 
     failed_amount = 1
-    dynamic_rerun_amount = rerun_amount - failed_amount
-    _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_amount, failed=failed_amount
-    )
+    _assert_result_outcomes(result, dynamic_rerun=rerun_amount, failed=failed_amount)
 
 
 @pytest.mark.parametrize(
@@ -143,7 +134,7 @@ def test_can_handle_multiple_dynamic_rerun_triggers(
 
     if should_rerun:
         failed_amount = 1
-        dynamic_rerun_amount = rerun_amount - failed_amount
+        dynamic_rerun_amount = rerun_amount
         passed_amount = 0
 
         assert result.ret == pytest.ExitCode.TESTS_FAILED
@@ -194,7 +185,7 @@ def test_dynamic_rerun_triggers_can_handle_regexes(testdir, rerun_regex, should_
 
     if should_rerun:
         failed_amount = 1
-        dynamic_rerun_amount = rerun_amount - failed_amount
+        dynamic_rerun_amount = rerun_amount
         passed_amount = 0
 
         assert result.ret == pytest.ExitCode.TESTS_FAILED
