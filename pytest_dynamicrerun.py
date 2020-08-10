@@ -192,12 +192,25 @@ def _get_all_rerunnable_items(items_to_rerun):
     return rerunnable_items
 
 
-def _is_rerun_triggering_report(item, report):
-    dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
-    if not dynamic_rerun_triggers:
-        return report.failed
+def _initialize_plugin_exposed_item_level_fields(item):
+    item.dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
+    item.dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
+    item.max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
 
-    item.dynamic_rerun_triggers = dynamic_rerun_triggers
+    if not hasattr(item, "dynamic_rerun_run_times"):
+        item.dynamic_rerun_run_times = []
+    item.dynamic_rerun_run_times.append(datetime.now())
+
+    if not hasattr(item, "dynamic_rerun_sleep_times"):
+        item.dynamic_rerun_sleep_times = []
+
+    if not hasattr(item, "num_dynamic_reruns_kicked_off"):
+        item.num_dynamic_reruns_kicked_off = 0
+
+
+def _is_rerun_triggering_report(item, report):
+    if not item.dynamic_rerun_triggers:
+        return report.failed
 
     for rerun_regex in item.dynamic_rerun_triggers:
         # NOTE: Checking for both report.longrepr and reprcrash on report.longrepr is intentional
@@ -233,9 +246,6 @@ def _rerun_dynamically_failing_items(session):
             last_rerun_attempt_time = current_time
 
             item.num_dynamic_reruns_kicked_off += 1
-
-            if not hasattr(item, "dynamic_rerun_sleep_times"):
-                item.dynamic_rerun_sleep_times = []
 
             last_run_time = item.dynamic_rerun_run_times[-1]
             sleep_time = current_time - last_run_time
@@ -277,29 +287,14 @@ def pytest_report_teststatus(report):
 
 
 def pytest_runtest_protocol(item, nextitem):
+    _initialize_plugin_exposed_item_level_fields(item)
+
     # don't apply the plugin if required arguments are missing
-    should_run_plugin = True
-
-    dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
-    if not dynamic_rerun_schedule:
-        should_run_plugin = False
-
-    max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
-    if max_allowed_dynamic_rerun_attempts is None:
-        should_run_plugin = False
+    should_run_plugin = (
+        item.dynamic_rerun_schedule and item.max_allowed_dynamic_rerun_attempts
+    )
 
     if should_run_plugin:
-        # TODO: We should refactor the setting of public fields on an item to a method
-        item.dynamic_rerun_schedule = dynamic_rerun_schedule
-        item.max_allowed_dynamic_rerun_attempts = max_allowed_dynamic_rerun_attempts
-
-        if not hasattr(item, "num_dynamic_reruns_kicked_off"):
-            item.num_dynamic_reruns_kicked_off = 0
-
-        if not hasattr(item, "dynamic_rerun_run_times"):
-            item.dynamic_rerun_run_times = []
-        item.dynamic_rerun_run_times.append(datetime.now())
-
         item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
         reports = runtestprotocol(item, nextitem=nextitem, log=False)
 
