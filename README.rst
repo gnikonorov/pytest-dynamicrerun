@@ -124,6 +124,8 @@ Contributing
 ------------
 Contributions are always welcome. Tests can be run with `tox`_.
 
+Please remember to add a `changelog`_ entry when adding a non-trivial feature.
+
 `pre-commit`_ is used to ensure basic checks pass.
 
 License
@@ -139,6 +141,7 @@ If you encounter any problems, please `file an issue`_ along with a detailed des
 .. _`MIT`: http://opensource.org/licenses/MIT
 .. _`PyPI`: https://pypi.org/
 .. _`croniter`: https://github.com/kiorky/croniter/
+.. _`changelog`: https://github.com/gnikonorov/pytest-dynamicrerun/blob/master/CHANGES.rst
 .. _`file an issue`: https://github.com/gnikonorov/pytest-dynamicrerun/issues
 .. _`pre-commit`: https://pre-commit.com/
 .. _`pytest`: https://github.com/pytest-dev/pytest

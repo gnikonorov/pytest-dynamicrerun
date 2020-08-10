@@ -1,4 +1,3 @@
-# TODO: Publish to PyPI
 # TODO: Dont count dynamic_rerun resulting runs to the pytest progress report
 # TODO: Allow option to dynamically rerun on certain marks
 # NOTE: Warning support is broken ATM and may be broken until some pytest patches are made upstream
