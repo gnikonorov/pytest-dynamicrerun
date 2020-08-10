@@ -30,7 +30,7 @@ def test_plugin_flags_are_recognized(testdir):
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts={}".format(dynamic_rerun_attempts),
-        "--dynamic-rerun-schedule=* * * * * *",
+        "--dynamic-rerun-schedule='* * * * * *'",
     )
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED
@@ -130,8 +130,8 @@ def test_mark_takes_precedence_over_flags(testdir):
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts=2",
-        "--dynamic-rerun-schedule=* * * * *",
-        "--dynamic-rerun-triggers=blah",
+        "--dynamic-rerun-schedule='* * * * *'",
+        "--dynamic-rerun-triggers='blah'",
     )
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED
@@ -208,7 +208,7 @@ def test_flags_take_precedence_over_ini_file(testdir):
     rerun_triggers = "foo"
     rerun_schedule = "* * * * * *"
 
-    testdir.makepyfile("def test_assert_false(): print('foo')")
+    testdir.makepyfile("def test_print_foo(): print('foo')")
 
     testdir.makeconftest(
         """
@@ -242,10 +242,14 @@ def test_flags_take_precedence_over_ini_file(testdir):
     """
     )
 
+    # NOTE: Intentionally leaving dynamic-rerun-triggers unquoted.
+    #       When having it quoted this test fails, but I verified that
+    #       failure will not happen, and that the test behaves as expected
+    #       when run via command line. Seems to be a testdir bug
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts={}".format(attempts),
-        "--dynamic-rerun-schedule={}".format(rerun_schedule),
+        "--dynamic-rerun-schedule='{}'".format(rerun_schedule),
         "--dynamic-rerun-triggers={}".format(rerun_triggers),
     )
 

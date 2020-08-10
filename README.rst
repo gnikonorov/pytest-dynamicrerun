@@ -35,7 +35,7 @@ This plugin is tested against the following Python and pytest versions. Each Pyt
 Installation
 ------------
 
-Install this plugin via `PyPI`_ by running the following::
+Install this plugin from `PyPI`_ by running the following::
 
     $ pip install pytest-dynamicrerun
 
@@ -46,13 +46,13 @@ Usage
 Specifying how many times to rerun
 ##################################
 
-By default, one rerun attempt is made. You can set the amount of times to attempt a rerun by  passing the ``--dynamic-rerun-attempts`` flag when invoking pytest or including the ``dynamic_rerun_attempts`` ini key.
+By default, one rerun attempt is made. You can set the amount of times to attempt a rerun by passing the ``--dynamic-rerun-attempts`` flag when invoking pytest or including the ``dynamic_rerun_attempts`` INI key.
 
 To pass the flag::
 
     python3 -m pytest --dynamic-rerun-attempts=3
 
-To set the ini key add the following to your config file's `[pytest]` section::
+To set the INI key add the following to your config file's ``[pytest]`` section::
 
     [pytest]
     dynamic_rerun_attempts = 123
@@ -62,13 +62,13 @@ Passing a non positive integer value will set the number of rerun attempts to th
 Specifying what to rerun on
 ###########################
 
-By default, all failed tests are rerun. You can change this behavior by either passing the ``--dynamic-rerun-triggers`` flag when invoking ``pytest`` or including the ``dynamic_rerun_triggers`` ini key. Note that regular expressions are allowed.
+By default, all failed tests are rerun. You can change this behavior by either passing the ``--dynamic-rerun-triggers`` flag when invoking ``pytest`` or including the ``dynamic_rerun_triggers`` INI key. Note that regular expressions are allowed.
 
 To pass the flag::
 
-    python3 -m pytest --dynamic-rerun-triggers=a triggering trace
+    python3 -m pytest --dynamic-rerun-triggers="a triggering trace"
 
-To set the ini key add the following to your config file's ``[pytest]`` section::
+To set the INI key add the following to your config file's ``[pytest]`` section::
 
     [pytest]
     dynamic_rerun_triggers = a triggering trace
@@ -78,20 +78,20 @@ Note that at this time only ``stdout``, ``stderr``, and exceptions are checked.
 Specifying a rerun interval
 ###########################
 
-You can specify an interval to rerun tests on by either passing the ``--dynamic-rerun-schedule`` flag to python when invoking ``pytest`` or including the ``dyanmic_rerun_schedule`` ini key.
+You can specify an interval to rerun tests on by either passing the ``--dynamic-rerun-schedule`` flag to python when invoking ``pytest`` or including the ``dyanmic_rerun_schedule`` INI key.
 
 Internally, this plugin uses `croniter`_ to schedule wait times. Because of this, we are able to schedule wait times with second level granularity. Visit the croniter repository ``README`` to find out more information on this.
 
 To pass the flag::
 
-    python3 -m pytest --dynamic-rerun-schedule= * * * * * *
+    python3 -m pytest --dynamic-rerun-schedule="* * * * * *"
 
-To set the ini key add the following to your config file's ``[pytest]`` section::
+To set the INI key add the following to your config file's ``[pytest]`` section::
 
     [pytest]
     dynamic_rerun_schedule = * * * * * *
 
-Note that any valid cron schedule is accepted. If this flag is not passed or set in the ini file, this plugin will not take effect. Passing an invalid value will force the interval to default to ``* * * * * *`` ( every second ).
+Note that any valid cron schedule is accepted. If this flag is not passed or set in the INI file, this plugin will not take effect. Passing an invalid value will force the interval to default to ``* * * * * *`` ( every second ).
 
 Using markers to rerun tests
 ############################
