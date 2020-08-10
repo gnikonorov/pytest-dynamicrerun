@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+1.0.4 (2020-08-10)
+------------------
 
 - Add a changelog
 - Refactor how we initialize plugin exposed ``item`` fields

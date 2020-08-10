@@ -12,14 +12,14 @@ def read(fname):
 
 setup(
     name="pytest-dynamicrerun",
-    version="1.0.3",
+    version="1.0.4",
     author="Gleb Nikonorov",
     author_email="gleb.i.nikonorov@gmail.com",
     maintainer="Gleb Nikonorov",
     maintainer_email="gleb.i.nikonorov@gmail.com",
     license="MIT",
     url="https://github.com/gnikonorov/pytest-dynamicrerun",
-    description="A pytest plugin to pause test execution for a dynamic amount of time",
+    description="A pytest plugin to rerun tests dynamically based off of test outcome and output.",
     long_description=read("README.rst"),
     py_modules=["pytest_dynamicrerun"],
     python_requires=">=3.5",
