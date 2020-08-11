@@ -500,3 +500,33 @@ def test_dynamic_reruns_batched_by_rerun_time(testdir):
     result.stdout.fnmatch_lines(expected_stdout)
 
     _assert_result_outcomes(result, dynamic_rerun=23, failed=5)
+
+
+def test_plugin_doesnt_reread_old_sections_on_rerun(testdir):
+    # NOTE: We intentionally raise an exception instead of printing something else
+    #       since exceptions don't add to the report.sections object
+    testdir.makepyfile(
+        """
+        COUNTER = 0
+
+        def test_usually_prints_foo():
+            global COUNTER
+            COUNTER = COUNTER + 1
+
+            if COUNTER == 5:
+                raise ValueError("bar")
+            else:
+                print("foo")
+        """
+    )
+
+    result = testdir.runpytest(
+        "-v",
+        "--dynamic-rerun-attempts=10",
+        "--dynamic-rerun-schedule='* * * * * */5'",
+        "--dynamic-rerun-triggers=foo",
+    )
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+
+    _assert_result_outcomes(result, dynamic_rerun=4, failed=1)

@@ -192,7 +192,7 @@ def _get_all_rerunnable_items(items_to_rerun):
     return rerunnable_items
 
 
-def _initialize_plugin_exposed_item_level_fields(item):
+def _initialize_plugin_item_level_fields(item):
     item.dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
     item.dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     item.max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
@@ -207,10 +207,20 @@ def _initialize_plugin_exposed_item_level_fields(item):
     if not hasattr(item, "num_dynamic_reruns_kicked_off"):
         item.num_dynamic_reruns_kicked_off = 0
 
+    # The amount of sections seen last run. This works since sections is a globally passed item that is not stage aware
+    # so, sections for 'teardown' has all of the sections of 'call' + new teardown sections
+    if not hasattr(item, "_amount_previously_seen_sections"):
+        item._amount_previously_seen_sections = 0
+
 
 def _is_rerun_triggering_report(item, report):
     if not item.dynamic_rerun_triggers:
         return report.failed
+
+    new_output_sections_found = (
+        len(report.sections) != item._amount_previously_seen_sections
+    )
+    item._amount_previously_seen_sections = len(report.sections)
 
     for rerun_regex in item.dynamic_rerun_triggers:
         # NOTE: Checking for both report.longrepr and reprcrash on report.longrepr is intentional
@@ -220,14 +230,15 @@ def _is_rerun_triggering_report(item, report):
         ):
             return True
 
-        for section in report.sections:
-            section_title = section[0]
-            section_text = section[1]
-            if section_title in [
-                "Captured stdout call",
-                "Captured stderr call",
-            ] and re.search(rerun_regex, section_text):
-                return True
+        if new_output_sections_found:
+            for section in report.sections:
+                section_title = section[0]
+                section_text = section[1]
+                if section_title in [
+                    "Captured stdout call",
+                    "Captured stderr call",
+                ] and re.search(rerun_regex, section_text):
+                    return True
 
     return False
 
@@ -287,7 +298,7 @@ def pytest_report_teststatus(report):
 
 
 def pytest_runtest_protocol(item, nextitem):
-    _initialize_plugin_exposed_item_level_fields(item)
+    _initialize_plugin_item_level_fields(item)
 
     # don't apply the plugin if required arguments are missing
     should_run_plugin = (
@@ -303,8 +314,7 @@ def pytest_runtest_protocol(item, nextitem):
         )
 
         for report in reports:
-            rerun_triggering = _is_rerun_triggering_report(item, report)
-            if rerun_triggering:
+            if _is_rerun_triggering_report(item, report):
                 item._dynamic_rerun_terminated = False
 
                 if will_run_again:
