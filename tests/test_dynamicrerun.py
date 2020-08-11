@@ -21,21 +21,34 @@ def test_help_text_contains_plugin_options(testdir):
     assert result.ret == 0
 
 
-# TODO: Add check to make sure dynamic_rerun_triggers flag respected
 def test_plugin_flags_are_recognized(testdir):
-    testdir.makepyfile("def test_assert_false(): assert False")
+    testdir.makepyfile(
+        """
+        def test_prints_foo():
+            print("foo")
+
+        def test_prints_bar():
+            print("bar")
+        """
+    )
 
     dynamic_rerun_attempts = 3
     failed_amount = 1
+    passed_amount = 1
+
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts={}".format(dynamic_rerun_attempts),
         "--dynamic-rerun-schedule='* * * * * *'",
+        "--dynamic-rerun-triggers=foo",
     )
 
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     _assert_result_outcomes(
-        result, dynamic_rerun=dynamic_rerun_attempts, failed=failed_amount,
+        result,
+        dynamic_rerun=dynamic_rerun_attempts,
+        failed=failed_amount,
+        passed=passed_amount,
     )
 
 
