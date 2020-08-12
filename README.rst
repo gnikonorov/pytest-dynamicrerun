@@ -102,7 +102,18 @@ We can achieve the above functionality through markers as well. This plugin defi
     def test_print_foo():
         print("foo")
 
-Note that first we check for arguments in markers, then command line switches, and only then do we check in INI files.
+Mark arguments correspond to INI keys as follows:
+
+* ``attempts`` corresponds to ``dynamic_rerun_attempts``
+* ``schedule`` corresponds to ``dynamic_rerun_schedule``
+* ``triggers`` corresponds to ``dynamic_rerun_triggers``
+
+Argument precedence
+###################
+
+Note that first we check for arguments in markers, then command line switches, and only then do we check in INI files. Values found at lower levels ( those checked first ) take precedence over values defined at a higher level ( those checked later ).
+
+For example, if we define the number of rerun attempts as 10 when invoking ``pytest`` from the command line, but later in a marker define the number of rerun attempts as 3, 3 would take precedence over 10 since we check markers before we check command line flags.
 
 Developing against this plugin
 ------------------------------
