@@ -21,19 +21,24 @@ DEFAULT_RERUN_SCHEDULE = "* * * * * *"
 MARKER_NAME = "dynamicrerun"
 PLUGIN_NAME = "dynamicrerun"
 
+DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME = "dynamic_rerun_attempts"
+DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME = "dynamic_rerun_schedule"
+DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
+
 
 def _add_dynamic_rerun_attempts_flag(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
         "--dynamic-rerun-attempts",
         action="store",
-        dest="dynamic_rerun_attempts",
+        dest=DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME,
         default=None,
         help="Set the amount of times reruns should be attempted ( defaults to 1 )",
     )
 
     parser.addini(
-        "dynamic_rerun_attempts", "default value for --dynamic-rerun-attempts"
+        DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME,
+        "default value for --dynamic-rerun-attempts",
     )
 
 
@@ -42,12 +47,15 @@ def _add_dynamic_rerun_schedule_flag(parser):
     group.addoption(
         "--dynamic-rerun-schedule",
         action="store",
-        dest="dynamic_rerun_schedule",
+        dest=DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME,
         default=None,
         help="Set the time to attempt a rerun in using a cron like format ( e.g.: '* * * * *' )",
     )
 
-    parser.addini("dynamic_rerun_schedule", "default value for --dyamic-rerun-schedule")
+    parser.addini(
+        DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME,
+        "default value for --dyamic-rerun-schedule",
+    )
 
 
 # TODO: As a follow up we can let each error define its own rerun amount here. But that should not be
@@ -57,13 +65,13 @@ def _add_dynamic_rerun_triggers_flag(parser):
     group.addoption(
         "--dynamic-rerun-triggers",
         action="append",
-        dest="dynamic_rerun_triggers",
+        dest=DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME,
         default=None,
         help="Set pytest output that will trigger dynamic reruns. By default all failing tests are dynamically rerun",
     )
 
     parser.addini(
-        "dynamic_rerun_triggers",
+        DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME,
         "default value for --dyamic-rerun-triggers",
         type="linelist",
     )
@@ -71,7 +79,7 @@ def _add_dynamic_rerun_triggers_flag(parser):
 
 def _can_item_be_potentially_dynamically_rerun(item):
     # this is a previously failing test that now passes
-    if hasattr(item, "_dynamic_rerun_terminated") and item._dynamic_rerun_terminated:
+    if item._dynamic_rerun_terminated:
         return False
 
     # this item has been run as many times as allowed
@@ -91,7 +99,9 @@ def _get_dynamic_rerun_schedule_arg(item):
     elif item.session.config.option.dynamic_rerun_schedule:
         dynamic_rerun_arg = str(item.session.config.option.dynamic_rerun_schedule)
     else:
-        dynamic_rerun_arg = item.session.config.getini("dynamic_rerun_schedule")
+        dynamic_rerun_arg = item.session.config.getini(
+            DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME
+        )
 
     if dynamic_rerun_arg and not croniter.is_valid(dynamic_rerun_arg):
         warnings.warn(
@@ -118,7 +128,9 @@ def _get_dynamic_rerun_attempts_arg(item):
     elif item.session.config.option.dynamic_rerun_attempts:
         rerun_attempts = item.session.config.option.dynamic_rerun_attempts
     else:
-        rerun_attempts = item.session.config.getini("dynamic_rerun_attempts")
+        rerun_attempts = item.session.config.getini(
+            DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME
+        )
 
     try:
         rerun_attempts = int(rerun_attempts)
@@ -143,7 +155,9 @@ def _get_dynamic_rerun_triggers_arg(item):
     elif item.session.config.option.dynamic_rerun_triggers:
         dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
     else:
-        dynamic_rerun_triggers = item.session.config.getini("dynamic_rerun_triggers")
+        dynamic_rerun_triggers = item.session.config.getini(
+            DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME
+        )
 
     if not isinstance(dynamic_rerun_triggers, list):
         return [dynamic_rerun_triggers]
@@ -206,6 +220,9 @@ def _initialize_plugin_item_level_fields(item):
 
     if not hasattr(item, "num_dynamic_reruns_kicked_off"):
         item.num_dynamic_reruns_kicked_off = 0
+
+    if not hasattr(item, "_dynamic_rerun_terminated"):
+        item._dynamic_rerun_terminated = False
 
     # The amount of sections seen last run. This works since sections is a globally passed item that is not stage aware
     # so, sections for 'teardown' has all of the sections of 'call' + new teardown sections
