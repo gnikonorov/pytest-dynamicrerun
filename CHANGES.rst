@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+1.0.6 (2020-08-12)
+------------------
 
 - Better document marks and argument precedence in README.rst
 
