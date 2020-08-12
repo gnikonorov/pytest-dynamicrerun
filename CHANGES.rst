@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+- Refactor argument parsing logic
+
 1.0.6 (2020-08-12)
 ------------------
 

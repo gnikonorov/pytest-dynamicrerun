@@ -23,7 +23,7 @@ PLUGIN_NAME = "dynamicrerun"
 
 DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME = "dynamic_rerun_attempts"
 DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME = "dynamic_rerun_schedule"
-DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
+DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
 
 
 def _add_dynamic_rerun_attempts_flag(parser):
@@ -65,13 +65,13 @@ def _add_dynamic_rerun_triggers_flag(parser):
     group.addoption(
         "--dynamic-rerun-triggers",
         action="append",
-        dest=DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME,
+        dest=DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME,
         default=None,
         help="Set pytest output that will trigger dynamic reruns. By default all failing tests are dynamically rerun",
     )
 
     parser.addini(
-        DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME,
+        DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME,
         "default value for --dyamic-rerun-triggers",
         type="linelist",
     )
@@ -89,75 +89,77 @@ def _can_item_be_potentially_dynamically_rerun(item):
     return True
 
 
-def _get_dynamic_rerun_schedule_arg(item):
+def _get_arg(item, marker_param_name, dest_var_param_name):
     marker = item.get_closest_marker(MARKER_NAME)
-    marker_param_name = "schedule"
+
+    config_option_dict = vars(item.session.config.option)
 
     # The priority followed is: marker, then command line switch, then config INI file
-    if marker and marker_param_name in marker.kwargs.keys():
-        dynamic_rerun_arg = marker.kwargs[marker_param_name]
-    elif item.session.config.option.dynamic_rerun_schedule:
-        dynamic_rerun_arg = str(item.session.config.option.dynamic_rerun_schedule)
+    if (
+        marker
+        and marker_param_name in marker.kwargs.keys()
+        and marker.kwargs[marker_param_name]
+    ):
+        arg = marker.kwargs[marker_param_name]
+    elif (
+        dest_var_param_name in config_option_dict.keys()
+        and config_option_dict[dest_var_param_name]
+    ):
+        arg = config_option_dict[dest_var_param_name]
     else:
-        dynamic_rerun_arg = item.session.config.getini(
-            DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME
-        )
+        arg = item.session.config.getini(dest_var_param_name)
 
-    if dynamic_rerun_arg and not croniter.is_valid(dynamic_rerun_arg):
-        warnings.warn(
-            "Can't parse invalid dynamic rerun schedule '{}'. "
-            "Ignoring dynamic rerun schedule and using default '{}'".format(
-                dynamic_rerun_arg, DEFAULT_RERUN_SCHEDULE
-            )
-        )
-        dynamic_rerun_arg = DEFAULT_RERUN_SCHEDULE
-
-    return dynamic_rerun_arg
+    return arg
 
 
 def _get_dynamic_rerun_attempts_arg(item):
-    marker = item.get_closest_marker(MARKER_NAME)
     marker_param_name = "attempts"
     warnings_text = "Rerun attempts must be a positive integer. Using default value {}".format(
         DEFAULT_RERUN_ATTEMPTS
     )
 
-    # The priority followed is: marker, then command line switch, then config INI file
-    if marker and marker_param_name in marker.kwargs.keys():
-        rerun_attempts = marker.kwargs[marker_param_name]
-    elif item.session.config.option.dynamic_rerun_attempts:
-        rerun_attempts = item.session.config.option.dynamic_rerun_attempts
-    else:
-        rerun_attempts = item.session.config.getini(
-            DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME
-        )
+    dynamic_rerun_attempts = _get_arg(
+        item, marker_param_name, DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME
+    )
 
     try:
-        rerun_attempts = int(rerun_attempts)
-    except ValueError:
+        dynamic_rerun_attempts = int(dynamic_rerun_attempts)
+    except (ValueError, TypeError):
         warnings.warn(warnings_text)
-        rerun_attempts = DEFAULT_RERUN_ATTEMPTS
+        dynamic_rerun_attempts = DEFAULT_RERUN_ATTEMPTS
 
-    if rerun_attempts <= 0:
+    if dynamic_rerun_attempts <= 0:
         warnings.warn(warnings_text)
-        rerun_attempts = DEFAULT_RERUN_ATTEMPTS
+        dynamic_rerun_attempts = DEFAULT_RERUN_ATTEMPTS
 
-    return rerun_attempts
+    return dynamic_rerun_attempts
+
+
+def _get_dynamic_rerun_schedule_arg(item):
+    marker_param_name = "schedule"
+
+    dynamic_rerun_schedule = _get_arg(
+        item, marker_param_name, DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME
+    )
+
+    if dynamic_rerun_schedule and not croniter.is_valid(dynamic_rerun_schedule):
+        warnings.warn(
+            "Can't parse invalid dynamic rerun schedule '{}'. "
+            "Ignoring dynamic rerun schedule and using default '{}'".format(
+                dynamic_rerun_schedule, DEFAULT_RERUN_SCHEDULE
+            )
+        )
+        dynamic_rerun_schedule = DEFAULT_RERUN_SCHEDULE
+
+    return dynamic_rerun_schedule
 
 
 def _get_dynamic_rerun_triggers_arg(item):
-    marker = item.get_closest_marker(MARKER_NAME)
     marker_param_name = "triggers"
 
-    # The priority followed is: marker, then command line switch, then config INI file
-    if marker and marker_param_name in marker.kwargs.keys():
-        dynamic_rerun_triggers = marker.kwargs[marker_param_name]
-    elif item.session.config.option.dynamic_rerun_triggers:
-        dynamic_rerun_triggers = item.session.config.option.dynamic_rerun_triggers
-    else:
-        dynamic_rerun_triggers = item.session.config.getini(
-            DYNMAIC_RERUN_TRIGGERS_DEST_VAR_NAME
-        )
+    dynamic_rerun_triggers = _get_arg(
+        item, marker_param_name, DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME
+    )
 
     if not isinstance(dynamic_rerun_triggers, list):
         return [dynamic_rerun_triggers]
