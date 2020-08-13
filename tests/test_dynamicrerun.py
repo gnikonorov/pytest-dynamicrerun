@@ -24,19 +24,8 @@ def test_help_text_contains_plugin_options(testdir):
     assert result.ret == 0
 
 
-# TODO: Add similar test but for all the mark arguments
 @pytest.mark.parametrize("plugin_disabled", [True, False])
 def test_plugin_flags_are_recognized(testdir, plugin_disabled):
-    testdir.makepyfile(
-        """
-        def test_prints_foo():
-            print("foo")
-
-        def test_prints_bar():
-            print("bar")
-        """
-    )
-
     requested_rerun_attempts = 3
 
     dynamic_rerun_attempts = 3
@@ -49,6 +38,16 @@ def test_plugin_flags_are_recognized(testdir, plugin_disabled):
         passed_amount = 2
         pytest_exit_status = pytest.ExitCode.OK
 
+    testdir.makepyfile(
+        """
+        def test_prints_foo():
+            print("foo")
+
+        def test_prints_bar():
+            print("bar")
+        """
+    )
+
     result = testdir.runpytest(
         "-v",
         "--dynamic-rerun-attempts={}".format(requested_rerun_attempts),
@@ -56,6 +55,49 @@ def test_plugin_flags_are_recognized(testdir, plugin_disabled):
         "--dynamic-rerun-schedule='* * * * * *'",
         "--dynamic-rerun-triggers=foo",
     )
+
+    assert result.ret == pytest_exit_status
+    _assert_result_outcomes(
+        result,
+        dynamic_rerun=dynamic_rerun_attempts,
+        failed=failed_amount,
+        passed=passed_amount,
+    )
+
+
+@pytest.mark.parametrize("plugin_disabled", [True, False])
+def test_plugin_marker_arguments_are_recognized(testdir, plugin_disabled):
+    requested_rerun_attempts = 3
+    rerun_schedule = "* * * * * *"
+    rerun_triggers = "foo"
+
+    dynamic_rerun_attempts = 3
+    failed_amount = 1
+    passed_amount = 1
+    pytest_exit_status = pytest.ExitCode.TESTS_FAILED
+    if plugin_disabled:
+        dynamic_rerun_attempts = 0
+        failed_amount = 0
+        passed_amount = 2
+        pytest_exit_status = pytest.ExitCode.OK
+
+    testdir.makepyfile(
+        """
+        import pytest
+
+        @pytest.mark.dynamicrerun(attempts={0}, disabled={1}, schedule="{2}", triggers="{3}")
+        def test_prints_foo():
+            print("foo")
+
+        @pytest.mark.dynamicrerun(attempts={0}, disabled={1}, schedule="{2}", triggers="{3}")
+        def test_prints_bar():
+            print("bar")
+        """.format(
+            requested_rerun_attempts, plugin_disabled, rerun_schedule, rerun_triggers
+        )
+    )
+
+    result = testdir.runpytest("-v")
 
     assert result.ret == pytest_exit_status
     _assert_result_outcomes(
