@@ -93,18 +93,36 @@ To set the INI key add the following to your config file's ``[pytest]`` section:
 
 Note that any valid cron schedule is accepted. If this flag is not passed or set in the INI file, this plugin will not take effect. Passing an invalid value will force the interval to default to ``* * * * * *`` ( every second ).
 
+Ignoring this plugin
+####################
+
+You can ignore this plugin by passing the ``--dynamic-rerun-disabled`` flag to python when invoking ``pytest`` or including the ``dynamic_rerun_disabled`` INI key.
+
+To pass the flag::
+
+    python3 -m pytest --dynamic-rerun-disabled="True"
+
+To set the INI key add the following to your config file's ``[pytest]`` section::
+
+    [pytest]
+    dynamic_rerun_disabled = True
+
+
+Note that if this flag is omitted, we do not disable the plugin ( so it is equivalent to passing ``--dynamic-rerun-disabled=False`` )
+
 Using markers to rerun tests
 ############################
 
 We can achieve the above functionality through markers as well. This plugin defines the ``dynamicrerun`` mark, which can be used as follows::
 
-    @pytest.mark.dynamicrerun(attempts=10, triggers="foo", schedule="* * * * * *")
+    @pytest.mark.dynamicrerun(attempts=10, disabled=False, schedule="* * * * * *", triggers="foo")
     def test_print_foo():
         print("foo")
 
 Mark arguments correspond to INI keys as follows:
 
 * ``attempts`` corresponds to ``dynamic_rerun_attempts``
+* ``disabled`` corresponds to ``dynanic_rerun_disabled``
 * ``schedule`` corresponds to ``dynamic_rerun_schedule``
 * ``triggers`` corresponds to ``dynamic_rerun_triggers``
 

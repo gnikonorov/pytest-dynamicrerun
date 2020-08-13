@@ -5,6 +5,7 @@ Unreleased
 ----------
 
 - Refactor argument parsing logic
+- Add new option ``--dynamic-rerun-disabled`` which disables this plugin when passed
 
 1.0.6 (2020-08-12)
 ------------------

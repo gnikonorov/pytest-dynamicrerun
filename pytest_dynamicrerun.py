@@ -12,6 +12,7 @@ import re
 import time
 import warnings
 from datetime import datetime
+from distutils.util import strtobool
 
 from _pytest.runner import runtestprotocol
 from croniter import croniter
@@ -22,6 +23,7 @@ MARKER_NAME = "dynamicrerun"
 PLUGIN_NAME = "dynamicrerun"
 
 DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME = "dynamic_rerun_attempts"
+DYNAMIC_RERUN_DISABLED_DEST_VAR_NAME = "dynamic_rerun_disabled"
 DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME = "dynamic_rerun_schedule"
 DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
 
@@ -39,6 +41,22 @@ def _add_dynamic_rerun_attempts_flag(parser):
     parser.addini(
         DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME,
         "default value for --dynamic-rerun-attempts",
+    )
+
+
+def _add_dynamic_rerun_disabled_flag(parser):
+    group = parser.getgroup(PLUGIN_NAME)
+    group.addoption(
+        "--dynamic-rerun-disabled",
+        action="store",
+        dest=DYNAMIC_RERUN_DISABLED_DEST_VAR_NAME,
+        default=False,
+        help="Disable the effects of the pytest-dynamicrerun plugin",
+    )
+
+    parser.addini(
+        DYNAMIC_RERUN_DISABLED_DEST_VAR_NAME,
+        "default value for --dynamic-rerun-disabled",
     )
 
 
@@ -114,7 +132,7 @@ def _get_arg(item, marker_param_name, dest_var_param_name):
 
 def _get_dynamic_rerun_attempts_arg(item):
     marker_param_name = "attempts"
-    warnings_text = "Rerun attempts must be a positive integer. Using default value {}".format(
+    warnings_text = "Rerun attempts must be a positive integer. Using default value '{}'".format(
         DEFAULT_RERUN_ATTEMPTS
     )
 
@@ -133,6 +151,23 @@ def _get_dynamic_rerun_attempts_arg(item):
         dynamic_rerun_attempts = DEFAULT_RERUN_ATTEMPTS
 
     return dynamic_rerun_attempts
+
+
+def _get_dynamic_rerun_disabled_arg(item):
+    marker_param_name = "disabled"
+
+    dynamic_rerun_disabled = _get_arg(
+        item, marker_param_name, DYNAMIC_RERUN_DISABLED_DEST_VAR_NAME
+    )
+
+    #  see https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool for true and false values
+    if isinstance(dynamic_rerun_disabled, str):
+        try:
+            dynamic_rerun_disabled = strtobool(dynamic_rerun_disabled)
+        except ValueError:
+            dynamic_rerun_disabled = False
+
+    return bool(dynamic_rerun_disabled)
 
 
 def _get_dynamic_rerun_schedule_arg(item):
@@ -209,6 +244,7 @@ def _get_all_rerunnable_items(items_to_rerun):
 
 
 def _initialize_plugin_item_level_fields(item):
+    item.dynamic_rerun_disabled = _get_dynamic_rerun_disabled_arg(item)
     item.dynamic_rerun_schedule = _get_dynamic_rerun_schedule_arg(item)
     item.dynamic_rerun_triggers = _get_dynamic_rerun_triggers_arg(item)
     item.max_allowed_dynamic_rerun_attempts = _get_dynamic_rerun_attempts_arg(item)
@@ -297,17 +333,21 @@ def _rerun_dynamically_failing_items(session):
 
 
 def pytest_addoption(parser):
+    # TODO: Rename these methods, the '_flag' bit is misleading
     _add_dynamic_rerun_attempts_flag(parser)
-    _add_dynamic_rerun_triggers_flag(parser)
+    _add_dynamic_rerun_disabled_flag(parser)
     _add_dynamic_rerun_schedule_flag(parser)
+    _add_dynamic_rerun_triggers_flag(parser)
 
 
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "{}(attempts=N, triggers=[REGEX], schedule=S): mark test as dynamically re-runnable. "
+        "{}(attempts=N, disabled=[True|False], schedule=S, triggers=[REGEX]): mark test as dynamically re-runnable. "
         "Attempt a rerun up to N times on anything that matches a regex in the list [REGEX], "
-        "following cron formatted schedule S".format(MARKER_NAME),
+        "following cron formatted schedule S. Set disabled to False to stop this plugin from running.".format(
+            MARKER_NAME
+        ),
     )
 
 
@@ -319,9 +359,11 @@ def pytest_report_teststatus(report):
 def pytest_runtest_protocol(item, nextitem):
     _initialize_plugin_item_level_fields(item)
 
-    # don't apply the plugin if required arguments are missing
+    # don't apply the plugin if required arguments are missing or if the user requested not to run it
     should_run_plugin = (
-        item.dynamic_rerun_schedule and item.max_allowed_dynamic_rerun_attempts
+        item.dynamic_rerun_schedule
+        and item.max_allowed_dynamic_rerun_attempts
+        and not item.dynamic_rerun_disabled
     )
 
     if should_run_plugin:

@@ -5,23 +5,28 @@ import pytest
 from helpers import _assert_result_outcomes
 
 
+# TODO: Add test to make sure mark help is up to date
 def test_help_text_contains_plugin_options(testdir):
     result = testdir.runpytest("--help")
     result.stdout.fnmatch_lines(
         [
             "dynamicrerun:",
             "*--dynamic-rerun-attempts=DYNAMIC_RERUN_ATTEMPTS",
-            "*--dynamic-rerun-triggers=DYNAMIC_RERUN_TRIGGERS",
+            "*--dynamic-rerun-disabled=DYNAMIC_RERUN_DISABLED",
             "*--dynamic-rerun-schedule=DYNAMIC_RERUN_SCHEDULE",
+            "*--dynamic-rerun-triggers=DYNAMIC_RERUN_TRIGGERS",
             "*dynamic_rerun_attempts (string):",
-            "*dynamic_rerun_triggers (linelist):",
+            "*dynamic_rerun_disabled (string):",
             "*dynamic_rerun_schedule (string):",
+            "*dynamic_rerun_triggers (linelist):",
         ]
     )
     assert result.ret == 0
 
 
-def test_plugin_flags_are_recognized(testdir):
+# TODO: Add similar test but for all the mark arguments
+@pytest.mark.parametrize("plugin_disabled", [True, False])
+def test_plugin_flags_are_recognized(testdir, plugin_disabled):
     testdir.makepyfile(
         """
         def test_prints_foo():
@@ -32,18 +37,27 @@ def test_plugin_flags_are_recognized(testdir):
         """
     )
 
+    requested_rerun_attempts = 3
+
     dynamic_rerun_attempts = 3
     failed_amount = 1
     passed_amount = 1
+    pytest_exit_status = pytest.ExitCode.TESTS_FAILED
+    if plugin_disabled:
+        dynamic_rerun_attempts = 0
+        failed_amount = 0
+        passed_amount = 2
+        pytest_exit_status = pytest.ExitCode.OK
 
     result = testdir.runpytest(
         "-v",
-        "--dynamic-rerun-attempts={}".format(dynamic_rerun_attempts),
+        "--dynamic-rerun-attempts={}".format(requested_rerun_attempts),
+        "--dynamic-rerun-disabled={}".format(plugin_disabled),
         "--dynamic-rerun-schedule='* * * * * *'",
         "--dynamic-rerun-triggers=foo",
     )
 
-    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    assert result.ret == pytest_exit_status
     _assert_result_outcomes(
         result,
         dynamic_rerun=dynamic_rerun_attempts,
@@ -56,6 +70,7 @@ def test_plugin_flags_are_recognized(testdir):
     "ini_key_name,ini_key_set_value,ini_key_fetch_value",
     [
         ("dynamic_rerun_attempts", "213", "'213'"),
+        ("dynamic_rerun_disabled", "True", "'True'"),
         ("dynamic_rerun_triggers", "ValueError", "['ValueError']"),
         (
             "dynamic_rerun_triggers",

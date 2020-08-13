@@ -18,7 +18,7 @@ def test_non_positive_integer_rerun_attempts_rejected(testdir, rerun_amount):
     testdir.makepyfile("def test_always_false(): assert False")
     result = testdir.runpytest("-v")
     result.stdout.fnmatch_lines(
-        ["*Rerun attempts must be a positive integer. Using default value 1*"]
+        ["*Rerun attempts must be a positive integer. Using default value '1'*"]
     )
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     _assert_result_outcomes(result, dynamic_rerun=1, failed=1)
