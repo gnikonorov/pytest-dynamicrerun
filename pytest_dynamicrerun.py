@@ -28,7 +28,7 @@ DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME = "dynamic_rerun_schedule"
 DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
 
 
-def _add_dynamic_rerun_attempts_flag(parser):
+def _add_dynamic_rerun_attempts_option(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
         "--dynamic-rerun-attempts",
@@ -44,7 +44,7 @@ def _add_dynamic_rerun_attempts_flag(parser):
     )
 
 
-def _add_dynamic_rerun_disabled_flag(parser):
+def _add_dynamic_rerun_disabled_option(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
         "--dynamic-rerun-disabled",
@@ -60,7 +60,7 @@ def _add_dynamic_rerun_disabled_flag(parser):
     )
 
 
-def _add_dynamic_rerun_schedule_flag(parser):
+def _add_dynamic_rerun_schedule_option(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
         "--dynamic-rerun-schedule",
@@ -78,7 +78,7 @@ def _add_dynamic_rerun_schedule_flag(parser):
 
 # TODO: As a follow up we can let each error define its own rerun amount here. But that should not be
 #       part of the initial pass
-def _add_dynamic_rerun_triggers_flag(parser):
+def _add_dynamic_rerun_triggers_option(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
         "--dynamic-rerun-triggers",
@@ -333,11 +333,10 @@ def _rerun_dynamically_failing_items(session):
 
 
 def pytest_addoption(parser):
-    # TODO: Rename these methods, the '_flag' bit is misleading
-    _add_dynamic_rerun_attempts_flag(parser)
-    _add_dynamic_rerun_disabled_flag(parser)
-    _add_dynamic_rerun_schedule_flag(parser)
-    _add_dynamic_rerun_triggers_flag(parser)
+    _add_dynamic_rerun_attempts_option(parser)
+    _add_dynamic_rerun_disabled_option(parser)
+    _add_dynamic_rerun_schedule_option(parser)
+    _add_dynamic_rerun_triggers_option(parser)
 
 
 def pytest_configure(config):
