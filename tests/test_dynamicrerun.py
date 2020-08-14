@@ -5,7 +5,6 @@ import pytest
 from helpers import _assert_result_outcomes
 
 
-# TODO: Add test to make sure mark help is up to date
 def test_help_text_contains_plugin_options(testdir):
     result = testdir.runpytest("--help")
     result.stdout.fnmatch_lines(
@@ -19,6 +18,19 @@ def test_help_text_contains_plugin_options(testdir):
             "*dynamic_rerun_disabled (string):",
             "*dynamic_rerun_schedule (string):",
             "*dynamic_rerun_triggers (linelist):",
+        ]
+    )
+    assert result.ret == 0
+
+
+def test_markers_flag_shows_dynamicrerun_marker(testdir):
+    result = testdir.runpytest("--markers")
+    result.stdout.fnmatch_lines(
+        [
+            "@pytest.mark.dynamicrerun(attempts=N, disabled=[True|False], schedule=S, triggers=[REGEX]): "
+            "mark test as dynamically re-runnable. "
+            "Attempt a rerun up to N times on anything that matches a regex in the list [REGEX], "
+            "following cron formatted schedule S. Set disabled to False to stop this plugin from running."
         ]
     )
     assert result.ret == 0
