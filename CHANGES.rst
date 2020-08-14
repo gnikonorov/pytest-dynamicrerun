@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+1.1.0 (2020-08-13)
+------------------
 
 - Refactor argument parsing logic
 - Add new option ``--dynamic-rerun-disabled`` which disables this plugin when passed
