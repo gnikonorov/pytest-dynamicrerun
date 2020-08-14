@@ -18,15 +18,19 @@ env:
     - PYTEST=6.0.1
 
 install:
-    - pip install -q pytest==$PYTEST
-    - pip install -q -e .
     - pip install -q pre-commit
+    - pip install -q pytest==$PYTEST
+    - pip install -q pytest-cov
+    - pip install -q -e .
     - pre-commit install
 
 script:
     # black does not work on python < 3.6 or pypy
     - if [[ "$TRAVIS_PYTHON_VERSION" > "3.5" ]] && [[ "$TRAVIS_PYTHON_VERSION" != pypy* ]]; then pre-commit run --all-files --show-diff-on-failure; fi
-    - py.test
+    - py.test --cov pytest_dynamicrerun
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash)
 
 notifications:
     email: false
