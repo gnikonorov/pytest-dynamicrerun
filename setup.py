@@ -12,7 +12,7 @@ def read(fname):
 
 setup(
     name="pytest-dynamicrerun",
-    version="1.1.0",
+    version="1.1.1",
     author="Gleb Nikonorov",
     author_email="gleb.i.nikonorov@gmail.com",
     maintainer="Gleb Nikonorov",

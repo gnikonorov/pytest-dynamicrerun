@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+1.1.1 (2020-08-15)
+------------------
 
 - Add documentation on how to append to ``dynamic_rerun_triggers`` to the README
 
