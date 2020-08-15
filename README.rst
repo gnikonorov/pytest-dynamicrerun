@@ -73,6 +73,14 @@ To set the INI key add the following to your config file's ``[pytest]`` section:
     [pytest]
     dynamic_rerun_triggers = a triggering trace
 
+You can accumulate values by either providing the flag multiple times or appending to the INI key. For example, the below two snippets would cause this plugin to trigger on both ``foo`` and ``bar``::
+
+    python3 -m pytest --dynamic-rerun-triggers="foo" --dynamic-rerun-triggers="bar"
+
+    [pytest]
+    dynamic_rerun_triggers = foo
+        bar
+
 Note that at this time only ``stdout``, ``stderr``, and exceptions are checked.
 
 Specifying a rerun interval
@@ -125,6 +133,14 @@ Mark arguments correspond to INI keys as follows:
 * ``disabled`` corresponds to ``dynanic_rerun_disabled``
 * ``schedule`` corresponds to ``dynamic_rerun_schedule``
 * ``triggers`` corresponds to ``dynamic_rerun_triggers``
+
+To pass multiple values to the ``triggers`` argument, provide a list as so::
+
+    @pytest.mark.dynamicrerun(attempts=10, disabled=False, schedule="* * * * * *", triggers=["foo", "bar", "baz"])
+    def test_print_foo():
+        print("foo")
+
+In the above example, reruns will be triggered on ``foo``, ``bar``, and ``baz``.
 
 Argument precedence
 ###################
