@@ -1,4 +1,10 @@
-# Test helper functions
+# Test helper functions and classes
+
+
+class ParameterPassLevel:
+    FLAG = 0
+    INI_KEY = 1
+    MARKER = 2
 
 
 def _assert_result_outcomes(
