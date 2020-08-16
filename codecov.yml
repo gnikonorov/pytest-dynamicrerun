@@ -1,0 +1,12 @@
+# NOTE: We allow a large 5% variance since pytest-cov does not count things like
+#       constants, imports, and function definitions as it is currently integrated
+# TODO: As a follow up, figure out why this is and correct it so we don't have such a high
+#       allowed variance
+coverage:
+    status:
+        project:
+            default:
+                threshold: 5%
+        patch:
+            default:
+                threshold: 5%
