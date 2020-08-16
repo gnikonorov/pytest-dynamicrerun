@@ -28,6 +28,42 @@ DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME = "dynamic_rerun_schedule"
 DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME = "dynamic_rerun_triggers"
 
 
+class ArgumentValue:
+    FLAG = 1
+    INI = 2
+    MARKER = 3
+
+    def __init__(self, argument_type, argument_value):
+        # NOTE: Please do not create instances of this class directly.
+        #       Use the static methods instead
+        acceptable_types = [self.FLAG, self.INI, self.MARKER]
+        if argument_type not in acceptable_types:
+            raise ValueError("Invalid argument type provided.")
+
+        self._argument_type = argument_type
+        self._argument_value = argument_value
+
+    @property
+    def argument_type(self):
+        return self._argument_type
+
+    @property
+    def argument_value(self):
+        return self._argument_value
+
+    @classmethod
+    def create_flag_level_argument(cls, argument_value):
+        return ArgumentValue(cls.FLAG, argument_value)
+
+    @classmethod
+    def create_ini_level_argument(cls, argument_value):
+        return ArgumentValue(cls.INI, argument_value)
+
+    @classmethod
+    def create_marker_level_argument(cls, argument_value):
+        return ArgumentValue(cls.MARKER, argument_value)
+
+
 def _add_dynamic_rerun_attempts_option(parser):
     group = parser.getgroup(PLUGIN_NAME)
     group.addoption(
@@ -119,15 +155,18 @@ def _get_arg(item, marker_param_name, dest_var_param_name):
         and marker.kwargs[marker_param_name]
     ):
         arg = marker.kwargs[marker_param_name]
+        argument_value = ArgumentValue.create_marker_level_argument(arg)
     elif (
         dest_var_param_name in config_option_dict.keys()
         and config_option_dict[dest_var_param_name]
     ):
         arg = config_option_dict[dest_var_param_name]
+        argument_value = ArgumentValue.create_flag_level_argument(arg)
     else:
         arg = item.session.config.getini(dest_var_param_name)
+        argument_value = ArgumentValue.create_ini_level_argument(arg)
 
-    return arg
+    return argument_value
 
 
 def _get_dynamic_rerun_attempts_arg(item):
@@ -139,18 +178,19 @@ def _get_dynamic_rerun_attempts_arg(item):
     dynamic_rerun_attempts = _get_arg(
         item, marker_param_name, DYNAMIC_RERUN_ATTEMPTS_DEST_VAR_NAME
     )
+    dynamic_rerun_attempts_value = dynamic_rerun_attempts.argument_value
 
     try:
-        dynamic_rerun_attempts = int(dynamic_rerun_attempts)
+        dynamic_rerun_attempts_value = int(dynamic_rerun_attempts_value)
     except (ValueError, TypeError):
         warnings.warn(warnings_text)
-        dynamic_rerun_attempts = DEFAULT_RERUN_ATTEMPTS
+        dynamic_rerun_attempts_value = DEFAULT_RERUN_ATTEMPTS
 
-    if dynamic_rerun_attempts <= 0:
+    if dynamic_rerun_attempts_value <= 0:
         warnings.warn(warnings_text)
-        dynamic_rerun_attempts = DEFAULT_RERUN_ATTEMPTS
+        dynamic_rerun_attempts_value = DEFAULT_RERUN_ATTEMPTS
 
-    return dynamic_rerun_attempts
+    return dynamic_rerun_attempts_value
 
 
 def _get_dynamic_rerun_disabled_arg(item):
@@ -159,15 +199,16 @@ def _get_dynamic_rerun_disabled_arg(item):
     dynamic_rerun_disabled = _get_arg(
         item, marker_param_name, DYNAMIC_RERUN_DISABLED_DEST_VAR_NAME
     )
+    dynamic_rerun_disabled_value = dynamic_rerun_disabled.argument_value
 
     #  see https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool for true and false values
-    if isinstance(dynamic_rerun_disabled, str):
+    if isinstance(dynamic_rerun_disabled_value, str):
         try:
-            dynamic_rerun_disabled = strtobool(dynamic_rerun_disabled)
+            dynamic_rerun_disabled_value = strtobool(dynamic_rerun_disabled_value)
         except ValueError:
-            dynamic_rerun_disabled = False
+            dynamic_rerun_disabled_value = False
 
-    return bool(dynamic_rerun_disabled)
+    return bool(dynamic_rerun_disabled_value)
 
 
 def _get_dynamic_rerun_schedule_arg(item):
@@ -176,17 +217,20 @@ def _get_dynamic_rerun_schedule_arg(item):
     dynamic_rerun_schedule = _get_arg(
         item, marker_param_name, DYNAMIC_RERUN_SCHEDULE_DEST_VAR_NAME
     )
+    dynamic_rerun_schedule_value = dynamic_rerun_schedule.argument_value
 
-    if dynamic_rerun_schedule and not croniter.is_valid(dynamic_rerun_schedule):
+    if dynamic_rerun_schedule_value and not croniter.is_valid(
+        dynamic_rerun_schedule_value
+    ):
         warnings.warn(
             "Can't parse invalid dynamic rerun schedule '{}'. "
             "Ignoring dynamic rerun schedule and using default '{}'".format(
-                dynamic_rerun_schedule, DEFAULT_RERUN_SCHEDULE
+                dynamic_rerun_schedule_value, DEFAULT_RERUN_SCHEDULE
             )
         )
-        dynamic_rerun_schedule = DEFAULT_RERUN_SCHEDULE
+        dynamic_rerun_schedule_value = DEFAULT_RERUN_SCHEDULE
 
-    return dynamic_rerun_schedule
+    return dynamic_rerun_schedule_value
 
 
 def _get_dynamic_rerun_triggers_arg(item):
@@ -195,10 +239,11 @@ def _get_dynamic_rerun_triggers_arg(item):
     dynamic_rerun_triggers = _get_arg(
         item, marker_param_name, DYNAMIC_RERUN_TRIGGERS_DEST_VAR_NAME
     )
+    dynamic_rerun_triggers_value = dynamic_rerun_triggers.argument_value
 
-    if not isinstance(dynamic_rerun_triggers, list):
-        return [dynamic_rerun_triggers]
-    return dynamic_rerun_triggers
+    if not isinstance(dynamic_rerun_triggers_value, list):
+        return [dynamic_rerun_triggers_value]
+    return dynamic_rerun_triggers_value
 
 
 def _get_next_rerunnable_time(items_to_rerun, current_time):

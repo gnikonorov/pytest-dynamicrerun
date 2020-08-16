@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+- Refactor argument parsing logic by wrapping argument value and the level it was extracted from into an ``ArgumentValue`` object when returning values from ``_get_arg``
+
 1.1.1 (2020-08-15)
 ------------------
 
